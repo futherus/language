@@ -1,0 +1,16 @@
+
+digraph G{
+    graph [dpi = 100];
+    bgcolor = "#2F353B";
+    ranksep = 0.5;
+    nodesep = 0.75;
+    edge[minlen = 3, arrowsize = 2, penwidth = 1.5, color = green];
+    node[shape = rectangle, style = "filled", fillcolor = "#C5D0E6", fontsize = 30,
+         color = "#C5D0E6", penwidth = 5];
+node0000024313d44cb0[label = "1", shape = oval, color = yellow]node0000024313d44cd8[label = "*", shape = diamond, color = red]node0000024313d44cd8 -> node0000024313d44cb0 [color = green];
+node0000024313d44cd8 -> node0000024313d44d00 [color = orange];
+node0000024313d44d00[label = "2", shape = oval, color = yellow]node0000024313d44d28[label = "*", shape = diamond, color = red]node0000024313d44d28 -> node0000024313d44cd8 [color = green];
+node0000024313d44d28 -> node0000024313d44d50 [color = orange];
+node0000024313d44d50[label = "3", shape = oval, color = yellow]node0000024313d44d78[label = "*", shape = diamond, color = red]node0000024313d44d78 -> node0000024313d44d28 [color = green];
+node0000024313d44d78 -> node0000024313d44da0 [color = orange];
+node0000024313d44da0[label = "8", shape = oval, color = yellow]}
