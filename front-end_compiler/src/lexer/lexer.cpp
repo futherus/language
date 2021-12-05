@@ -183,6 +183,11 @@ lexer_err peek(Token* tok)
         sprintf(buffer, "%s", (STD_NAME));      \
         break;                                  \
 
+#define DEF_AUX(NAME, MANGLE)                   \
+    case(TOK_##MANGLE):                         \
+        sprintf(buffer, "%s", (NAME));          \
+        break;                                  \
+
 char* demangle(const Token* tok)
 {
     assert(tok);
@@ -238,7 +243,18 @@ char* demangle(const Token* tok)
 
             break;
         }
+        case TYPE_AUX:
+        {
+            switch(tok->val.aux)
+            {
+                #include "../reserved_auxiliary.inc"
 
+                default:
+                    assert(0);
+            }
+            
+            break;
+        }
         default: case TYPE_NOTYPE : case TYPE_EOF : case TYPE_ID :
             ASSERT$(0, LEXER_NOTFOUND, assert(0); );
             break;

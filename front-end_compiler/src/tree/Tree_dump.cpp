@@ -43,18 +43,6 @@ static char* graphviz_png_()
     return filename;
 }
 
-#define DEF_OP(SYMB, CODE)            \
-    case (LEX_##CODE):                \
-
-#define DEF_PAREN(SYMB, CODE)         \
-    case (LEX_##CODE):                \
-
-#define DEF_FUNC(HASH, NAME)          \
-    case(LEX_##NAME):                 \
-
-#define DEF_SUBST(HASH, NAME)         \
-    case(LEX_##NAME):                 \
-
 static void tree_print_node_(Node* node, size_t)
 {
     FILE* stream = TEMP_GRAPH_STREAM;
@@ -63,39 +51,46 @@ static void tree_print_node_(Node* node, size_t)
 
     switch(node->tok.type)
     {
-        case TYPE_ID:
-        {
-            PRINT("shape = box, color = blue]");
-
-            break;
-        }
-        case TYPE_NUMBER:
-        {
-            PRINT("shape = oval, color = yellow]");
-
-            break;
-        }
         case TYPE_OP:
-        {
             PRINT("shape = diamond, color = red]");
-
             break;
-        }
-        default:
+
+        case TYPE_EMBED:
+            PRINT("shape = pentagon, color = red]");
+            break;
+        
+        case TYPE_KEYWORD: case TYPE_AUX :
+            PRINT("shape = parallelogram, color = black]");
+            break;
+            
+        case TYPE_VAR:
+            PRINT("shape = box, color = blue]");
+            break;
+        
+        case TYPE_CONSTANT:
+            PRINT("shape = doublebox, color = blue]");
+            break;
+
+        case TYPE_NUMBER:
+            PRINT("shape = oval, color = yellow]");
+            break;
+
+        case TYPE_FUNC:
+            PRINT("shape = octagon, color = blue]");
+            break;
+
+        default: case TYPE_NOTYPE : case TYPE_EOF : case TYPE_ID :
         {
             assert(0);
         }
     }
-
+    PRINT("\n");
+    
     if(node->left  != nullptr)
         PRINT("node%p -> node%p [color = green];\n", node, node->left);
     if(node->right != nullptr)
         PRINT("node%p -> node%p [color = orange];\n", node, node->right);
 }
-#undef DEF_OP
-#undef DEF_PAREN
-#undef DEF_FUNC
-
 static void tree_graph_dump_(Tree* tree)
 {
     FILE* stream = fopen(GRAPHVIZ_TEMP_FILE, "w");

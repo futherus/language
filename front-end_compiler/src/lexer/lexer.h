@@ -24,11 +24,12 @@ enum token_type
     TYPE_OP       =  1,
     TYPE_EMBED    =  2,
     TYPE_KEYWORD  =  3,
-    TYPE_CONSTANT =  4,
-    TYPE_NUMBER   =  5,
-    TYPE_VAR      =  6,
-    TYPE_FUNC     =  7,
-    TYPE_ID       =  8,
+    TYPE_AUX      =  4,
+    TYPE_VAR      =  5,
+    TYPE_CONSTANT =  6,
+    TYPE_NUMBER   =  7,
+    TYPE_FUNC     =  8,
+    TYPE_ID       =  9,
 };
 
 #define DEF_OP(HASH, NAME, STD_NAME, MANGLE) TOK_##MANGLE,
@@ -52,6 +53,13 @@ enum token_embedded
 };
 #undef DEF_EMB
 
+#define DEF_AUX(NAME, MANGLE) TOK_##MANGLE,
+enum token_auxiliary
+{
+    #include "../reserved_auxiliary.inc"
+};
+#undef DEF_AUX
+
 struct Token 
 {
     token_type type = TYPE_NOTYPE;
@@ -63,6 +71,7 @@ struct Token
         token_keywords  key;
         token_operators op;
         token_embedded  emb;
+        token_auxiliary aux;
     } val = {};
 
     int name_len = 0;

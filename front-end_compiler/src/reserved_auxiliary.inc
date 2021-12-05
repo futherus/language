@@ -1,0 +1,5 @@
+DEF_AUX("call", CALL)
+DEF_AUX("function", FUNCTION)
+DEF_AUX("parameter", PARAMETER)
+DEF_AUX("decision", DECISION)
+DEF_AUX("statement", STATEMENT)
