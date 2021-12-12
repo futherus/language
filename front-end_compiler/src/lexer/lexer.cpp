@@ -7,7 +7,52 @@
 #include "lexer.h"
 #include "../dumpsystem/dumpsystem.h"
 
-static void clean_whitespaces_(char* txt, size_t* pos)
+static const ptrdiff_t TOK_ARR_MIN_CAP_     = 8;
+static const ptrdiff_t TOK_ARR_CAP_MULTPLR_ = 2;
+
+static struct Token_arr
+{
+    Token* data = nullptr;
+    ptrdiff_t size = 0;
+    ptrdiff_t cap  = 0;
+
+    ptrdiff_t pos  = 0;
+    ptrdiff_t eof  = 0;
+} TOKEN_ARRAY_;
+
+static lexer_err resize_(Token_arr* tok_arr)
+{
+    assert(tok_arr);
+
+    ptrdiff_t new_cap = 0;
+    if(tok_arr->cap == 0)
+        new_cap = TOK_ARR_MIN_CAP_;
+    else
+        new_cap = tok_arr->cap * TOK_ARR_CAP_MULTPLR_;
+
+    Token* new_data = (Token*) realloc(tok_arr->data, new_cap * sizeof(Token));
+    ASSERT_RET$(new_data, LEXER_BAD_ALLOC);
+
+    tok_arr->data = new_data;
+    tok_arr->cap  = new_cap;
+
+    return LEXER_NOERR;
+}
+
+static lexer_err add_token_(const Token* token)
+{
+    assert(token);
+
+    if(TOKEN_ARRAY_.cap == TOKEN_ARRAY_.size)
+        PASS$(!resize_(&TOKEN_ARRAY_), return LEXER_BAD_ALLOC; );
+    
+    *(TOKEN_ARRAY_.data + TOKEN_ARRAY_.size) = *token;
+    TOKEN_ARRAY_.size++;
+
+    return LEXER_NOERR;
+}
+
+static void clean_whitespaces_(char* txt, ptrdiff_t* pos)
 {
     assert(txt && pos);
 
@@ -15,117 +60,163 @@ static void clean_whitespaces_(char* txt, size_t* pos)
         (*pos)++;
 }
 
-static bool get_number(char* ptr, double* num, int* n_read)
+static bool get_number(char* txt, double* num, int* n_read)
 {
-    if(isdigit(*ptr))
+    if(isdigit(*txt))
     {
-        sscanf(ptr, "%lg%n", num, n_read);
+        sscanf(txt, "%lg%n", num, n_read);
         return true;
     }
 
     return false;
 }
 
-static void wordlen_(char* ptr, int* n_read)
+static void wordlen_(char* txt, int* n_read)
 {
-    assert(ptr && n_read);
+    assert(txt && n_read);
 
-    if(ispunct(*ptr))
-    {
-        (*n_read)++;
-        return;
-    }
-
-    while(isalnum(ptr[*n_read]) || ptr[*n_read] == '_')
+    while(isalnum(txt[*n_read]) || txt[*n_read] == '_')
         (*n_read)++;
 }
+/*
+#define DEF_KEY(HASH, NAME, STD_NAME, MANGLE)               \
+    case(HASH):                                             \
+        tmp.type = TYPE_KEYWORD;                            \
+        tmp.val.key = TOK_##MANGLE;                         \
+        pos += n_read;                                      \
+        PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+        continue;                                           \
 
-static Token TMP_TOK_    = {};
-static bool  IS_TMP_TOK_ = false;
-static size_t DATA_SZ_   = 0;
+#define DEF_OP(HASH, NAME, STD_NAME, MANGLE)                \
+    case(HASH):                                             \
+        tmp.type = TYPE_OP;                                 \
+        tmp.val.op = TOK_##MANGLE;                          \
+        pos += n_read;                                      \
+        PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+        continue;                                           \
 
-#define DEF_KEY(HASH, NAME, STD_NAME, MANGLE)   \
-    case(HASH):                                 \
-        TMP_TOK_.type = TYPE_KEYWORD;           \
-        TMP_TOK_.val.key = TOK_##MANGLE;        \
-        IS_TMP_TOK_ = true;                     \
-        pos += n_read;                          \
-        return LEXER_NOERR;                     \
+#define DEF_EMB(HASH, NAME, STD_NAME, MANGLE)               \
+    case(HASH):                                             \
+        tmp.type = TYPE_EMBED;                              \
+        tmp.val.emb = TOK_##MANGLE;                         \
+        pos += n_read;                                      \
+        PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+        continue;                                           \
+*/
 
-#define DEF_OP(HASH, NAME, STD_NAME, MANGLE)    \
-    case(HASH):                                 \
-        TMP_TOK_.type = TYPE_OP;                \
-        TMP_TOK_.val.op = TOK_##MANGLE;         \
-        IS_TMP_TOK_ = true;                     \
-        pos += n_read;                          \
-        return LEXER_NOERR;                     \
+#define DEF_KEY(HASH, NAME, STD_NAME, MANGLE)                   \
+    if(n_read == 0 || n_read == sizeof(NAME) - 1)               \
+    {                                                           \
+        if(strncmp(data + pos, (NAME), sizeof(NAME) - 1) == 0)  \
+        {                                                       \
+            printf("%s\n", NAME);                               \
+            tmp.type = TYPE_KEYWORD;                            \
+            tmp.val.key = TOK_##MANGLE;                         \
+            pos += sizeof(NAME) - 1;                            \
+            PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+            continue;                                           \
+        }                                                       \
+    }                                                           \
 
-#define DEF_EMB(HASH, NAME, STD_NAME, MANGLE)   \
-    case(HASH):                                 \
-        TMP_TOK_.type = TYPE_EMBED;             \
-        TMP_TOK_.val.emb = TOK_##MANGLE;        \
-        IS_TMP_TOK_ = true;                     \
-        pos += n_read;                          \
-        return LEXER_NOERR;                     \
+#define DEF_OP(HASH, NAME, STD_NAME, MANGLE)                    \
+    if(n_read == 0 || n_read == sizeof(NAME) - 1)               \
+    {                                                           \
+        if(strncmp(data + pos, (NAME), sizeof(NAME) - 1) == 0)  \
+        {                                                       \
+            printf("%s\n", NAME);                               \
+            tmp.type = TYPE_OP;                                 \
+            tmp.val.op = TOK_##MANGLE;                          \
+            pos += sizeof(NAME) - 1;                            \
+            PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+            continue;                                           \
+        }                                                       \
+    }                                                           \
 
-static lexer_err lexer_(char* data)
+#define DEF_EMB(HASH, NAME, STD_NAME, MANGLE)                   \
+    if(n_read == 0 || n_read == sizeof(NAME) - 1)               \
+    {                                                           \
+        if(strncmp(data + pos, (NAME), sizeof(NAME) - 1) == 0)  \
+        {                                                       \
+            printf("%s\n", NAME);                               \
+            tmp.type = TYPE_EMBED;                              \
+            tmp.val.emb = TOK_##MANGLE;                         \
+            pos += sizeof(NAME) - 1;                            \
+            PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; ); \
+            continue;                                           \
+        }                                                       \
+    }                                                           \
+
+lexer_err lexer_init(char* data, ptrdiff_t data_sz)
 {
-    static char*  txt = nullptr;
-    static size_t pos = 0;
-
-    ASSERT_RET$(txt || data, LEXER_NULLPTR);
-
-    if(data)
-    {
-        TMP_TOK_    = {};
-        IS_TMP_TOK_ = false;
-        txt = data;
-        pos = 0;
-    }
-
-    clean_whitespaces_(txt, &pos);
-
-    if(pos == DATA_SZ_)
-    {
-        TMP_TOK_.type = TYPE_EOF;
-        TMP_TOK_.val = {};
-
-        return LEXER_NOERR;
-    }
+    assert(data);
+    ASSERT_RET$(data_sz > 0, LEXER_EMPTY_DATA);
     
-    int n_read = 0;
+    ptrdiff_t pos = 0;
+    Token tmp = {};
 
-    if(get_number(txt + pos, &TMP_TOK_.val.num, &n_read))
+    while(true)
     {
-        TMP_TOK_.type = TYPE_NUMBER;
-        IS_TMP_TOK_   = true;
-        pos += n_read;
+        clean_whitespaces_(data, &pos);   
+        if(pos == data_sz)
+            break;
+        
+        int n_read = 0;
+        tmp = {};
 
-        return LEXER_NOERR;
-    }
+        if(get_number(data + pos, &tmp.val.num, &n_read))
+        {
+            tmp.type = TYPE_NUMBER;
+            pos += n_read;
+            PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; );
 
-    wordlen_(txt + pos, &n_read);
+            continue;
+        }
+        wordlen_(data + pos, &n_read);
 
-    ASSERT_RET$(n_read > 0, LEXER_UNKNWN_SYMB);
+        //ASSERT_RET$(n_read > 0, LEXER_UNKNWN_SYMB);
 
-    uint64_t hash = fnv1_64(txt + pos, n_read);
-    switch(hash)
-    {
+        //uint64_t hash = fnv1_64(data + pos, n_read);
+        //switch(hash)
+        //{
+        //    #include "../reserved_operators.inc"
+        //    #include "../reserved_keywords.inc"
+        //    #include "../reserved_embedded.inc"
+//
+        //    default:
+        //    { /*fallthrough*/ }
+        //}
+
         #include "../reserved_operators.inc"
         #include "../reserved_keywords.inc"
         #include "../reserved_embedded.inc"
+        /* else */
+           { void(0); }
 
-        default:
-        { /*fallthrough*/ }
+        if(!n_read)
+        {
+            printf("Unknown symbols in input\n");
+            exit(1);
+        }
+
+        tmp.type       = TYPE_ID;
+        tmp.val.name   = data + pos;
+        tmp.name_len   = n_read;
+
+        PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; );
+        printf("%s\n", data + pos);
+        pos += n_read;
     }
 
-    TMP_TOK_.type       = TYPE_ID;
-    IS_TMP_TOK_         = true;
-    TMP_TOK_.val.name   = txt + pos;
-    TMP_TOK_.name_len   = n_read;
+    TOKEN_ARRAY_.eof = TOKEN_ARRAY_.size;
+    tmp.type = TYPE_EOF;
+    PASS$(!add_token_(&tmp), return LEXER_BAD_ALLOC; );
 
-    pos += n_read;
+    return LEXER_NOERR;
+}
 
+lexer_err lexer_dstr()
+{
+    printf("destructor");
     return LEXER_NOERR;
 }
 
@@ -133,37 +224,29 @@ static lexer_err lexer_(char* data)
 #undef DEF_KEY
 #undef DEF_EMB
 
-lexer_err lexer_init(char* data, size_t data_sz)
-{
-    assert(data);
-    ASSERT_RET$(data_sz > 0, LEXER_EMPTY_DATA);
-
-    DATA_SZ_ = data_sz;
-
-    return lexer_(data);
-}
-
 lexer_err consume(Token* tok)
 {
     assert(tok);
+    assert(TOKEN_ARRAY_.pos <= TOKEN_ARRAY_.eof);
 
-    if(!IS_TMP_TOK_)
-        PASS$(!lexer_(nullptr), return LEXER_PASS_ERR; );
-
-    *tok = TMP_TOK_;
-    IS_TMP_TOK_ = false;
+    *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.pos];
+    TOKEN_ARRAY_.pos++;
 
     return LEXER_NOERR;
 }
 
-lexer_err peek(Token* tok)
+lexer_err peek(Token* tok, ptrdiff_t offset)
 {
     assert(tok);
 
-    if(!IS_TMP_TOK_)
-        PASS$(!lexer_(nullptr), return LEXER_PASS_ERR; );
+    if(TOKEN_ARRAY_.pos + offset < 0 || TOKEN_ARRAY_.pos + offset > TOKEN_ARRAY_.eof)
+    {
+        *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.eof];
+        
+        return LEXER_NOERR;
+    }
 
-    *tok = TMP_TOK_;
+    *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.pos + offset];
 
     return LEXER_NOERR;
 }
@@ -191,7 +274,7 @@ lexer_err peek(Token* tok)
 char* demangle(const Token* tok)
 {
     assert(tok);
-
+    
     static char buffer[1000] = "";
 
     switch(tok->type)

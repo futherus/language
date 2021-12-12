@@ -15,6 +15,7 @@ enum lexer_err
     LEXER_NAME_EXISTS    = 7,
     LEXER_RESERVED_NAMES = 8,
     LEXER_EMPTY_DATA     = 9,
+    LEXER_BAD_ALLOC      = 10,
 };
 
 enum token_type
@@ -77,12 +78,11 @@ struct Token
     int name_len = 0;
 };
 
-lexer_err lexer_init(char* data, size_t data_sz);
+lexer_err lexer_init(char* data, ptrdiff_t data_sz);
 lexer_err lexer_dstr();
 
 lexer_err consume(Token* tok);
-
-lexer_err peek(Token* tok);
+lexer_err peek(Token* tok, ptrdiff_t offset);
 
 char* demangle(const Token* tok);
 

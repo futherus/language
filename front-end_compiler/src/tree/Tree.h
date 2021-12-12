@@ -11,7 +11,7 @@ const ptrdiff_t TREE_CHUNK_SIZE      = 512;
 
 struct Node
 {
-    Token tok   = {};
+    Token tok = {};
 
     Node* left  = 0;
     Node* right = 0;
@@ -19,7 +19,7 @@ struct Node
 
 struct Tree
 {
-    Node**    ptr_arr     = nullptr;
+    Node** ptr_arr     = nullptr;
     ptrdiff_t ptr_arr_cap = 0;
 
     ptrdiff_t size = 0;
