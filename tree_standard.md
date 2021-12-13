@@ -289,49 +289,39 @@ Terminates current function and returns specified value to caller.
 ### **Assignment**
 Assigns value to variable.
 
-First initializer is written in memory for variable itself. Every next initializer is written in memory with shift.
+If shift is specified value is written with relative shift to variable.
+
+If variable wasn't declared before, memory of `shift + 1` size should be allocated.
 
 * Parent &ndash; `statement` (both ***first branch*** and not ***first branch***)
 * Name &ndash; ***identifier*** (variable name)
-* Index &ndash; ***expression***
+* Shift &ndash; ***index***
 * Value &ndash; ***expression***
 
 - `=` &ndash; main node of assignment.
 - `const` &ndash; optional node, specifies that variable is constant
-- `initializer` &ndash; node for variable initializer
 
 <img src = "img/assignment.png">
 
     main()
     {
         x = 1;
-        
+
         return 0;
     }
+
+    global_x = 2;    
 
 <img src = "img/assignment_ex1.png">
 
     main()
     {
-        x[777] = {1, 2, 3, 4, 5 * 11};
+        x[8] = 1337;
 
         return 0;
     }
 
 <img src = "img/assignment_ex2.png">
-
-    main()
-    {
-        x = {1, 2, 3};
-
-        return 0;
-    }
-
-<img src = "img/assignment_ex3.png">
-
-> If index is specified variable is interpreted as array.
-
-> If variable wasn't declared before, index is interpreted as size of array. Otherwise index is interpreted as relative shift before assignment.
 
 > `=` is not an operator, it doesn't return any output. Therefore, it <u>cannot</u> be used in ***expression***
 
@@ -342,13 +332,13 @@ Tree does not distinguish between variables and arrays. Index can be specified f
 
 * **assignment**, variable wasn't declared
 
-    Static memory of *index* size should be allocated.
+    Static memory of `index + 1` size is allocated. Value is written with *index* shift.
 
 <img src = "img/index_assignment_notdecl.png">
 
 * **assignment**, variable was declared
 
-    *Index* should be used as shift in memory relative to variable.
+    Value is written with *index* shift.
 
 <img src = "img/index_assignment_decl.png">
 
@@ -360,13 +350,15 @@ Tree does not distinguish between variables and arrays. Index can be specified f
 
 * **expression**, variable was declared
 
-    *Index* should be used as shift in memory relative to variable.
+    Value is read with *index* shift.
 
 <img src = "img/index_expression_decl.png">
 
+## **Maintainers**
+
+Alexander Simankovich (docs maintainer) simankovich.al@phystech.edu
+
+Denis Dedkov dedkov.da@phystech.edu
+
 ## **Contributors**
-Denis "d3phys" Dedkov
-
-Ivan "vian96" Martynov
-
-Alexander "futherus" Simankovich (docs maintainer)
+Ivan Martynov martynov.is@phystech.edu

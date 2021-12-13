@@ -13,10 +13,11 @@ int main()
     
     main()
     {
-        i[10] = {11, 22, 33};
-        var = x >> (1) + 7;
+        y = x >> (5);
+
         return 0;
     }
+
     )";
     Tree tree = {};
     parse(&tree, buffer, sizeof(buffer) - 1);

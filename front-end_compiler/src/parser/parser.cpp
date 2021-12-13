@@ -305,34 +305,7 @@ static parser_err assign(Node** base)
     MK_NODE(base, &tok);
     (*base)->left = tmp;
 
-    MK_AUX(&(*base)->right, TOK_INITIALIZER);
-
-    peek(&tok, 0);
-    if(tok.type == TYPE_OP && tok.val.op == TOK_LFPAR)
-    {
-        consume(&tok);
-
-        expression(&(*base)->right->right);
-
-        consume(&tok);
-        while(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
-        {
-            tmp = (*base)->right;
-            MK_AUX(&(*base)->right, TOK_INITIALIZER);
-
-            expression(&(*base)->right->right);
-            (*base)->right->left = tmp;
-
-            consume(&tok);
-        }
-
-        if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-            syntax_error(&tok);
-    }
-    else
-    {
-        expression(&(*base)->right->right);
-    }
+    expression(&(*base)->right);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
