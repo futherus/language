@@ -2,6 +2,8 @@
 ## **Introduction**
 This document describes standard for tree storage.
 
+Up-to-date docs are stored [here](https://github.com/futherus/Language/blob/master/tree_standard.md).
+
 ---
 
 ## **File format**
@@ -28,7 +30,7 @@ Round parenthesis mustn't be used.
 
 * Function name has no descendants.
 * Variable name may have left descendant `const` and right descendant, specifying index.
-> If index is specified in assignment and variable wasn't declared before, index is used as array size. Otherwise index is used as shift in memory. See *'assignment'* for more information.
+> If index is specified in assignment and variable wasn't declared before, index is used as array size. Otherwise index is used as shift in memory. See *'assignment'* and *'index'* for more information.
 
 ### **Keywords**
 **Operators**
@@ -361,3 +363,10 @@ Tree does not distinguish between variables and arrays. Index can be specified f
     *Index* should be used as shift in memory relative to variable.
 
 <img src = "img/index_expression_decl.png">
+
+## **Contributors**
+Denis "d3phys" Dedkov
+
+Ivan "vian96" Martynov
+
+Alexander "futherus" Simankovich (docs maintainer)
