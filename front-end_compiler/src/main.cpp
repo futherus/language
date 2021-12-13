@@ -13,11 +13,8 @@ int main()
     
     main()
     {
-        var1 = 1 * 1;
-        var2 = 1 && (2 * 3);
-        var_unary_op = my_sin(5);
-        var2_unary_op = !(1 + 2);
-
+        x[10] = {11, 22, 33};
+        var = x >> (1) + 7;
         return 0;
     }
     )";

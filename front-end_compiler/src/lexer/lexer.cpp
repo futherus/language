@@ -224,18 +224,16 @@ lexer_err lexer_dstr()
 #undef DEF_KEY
 #undef DEF_EMB
 
-lexer_err consume(Token* tok)
+void consume(Token* tok)
 {
     assert(tok);
     assert(TOKEN_ARRAY_.pos <= TOKEN_ARRAY_.eof);
 
     *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.pos];
     TOKEN_ARRAY_.pos++;
-
-    return LEXER_NOERR;
 }
 
-lexer_err peek(Token* tok, ptrdiff_t offset)
+void peek(Token* tok, ptrdiff_t offset)
 {
     assert(tok);
 
@@ -243,12 +241,10 @@ lexer_err peek(Token* tok, ptrdiff_t offset)
     {
         *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.eof];
         
-        return LEXER_NOERR;
+        return;
     }
 
     *tok = TOKEN_ARRAY_.data[TOKEN_ARRAY_.pos + offset];
-
-    return LEXER_NOERR;
 }
 
 #define DEF_OP(HASH, NAME, STD_NAME, MANGLE)    \

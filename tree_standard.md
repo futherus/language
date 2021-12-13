@@ -41,6 +41,7 @@ Round parenthesis mustn't be used.
 * `print`, `scan`
 
 **Support keywords**
+* `=`
 * `if`, `decision`
 * `while`
 * `return`
@@ -101,6 +102,31 @@ In ***first branch*** `main` function should be defined. Program execution start
 Subtree of operators and their operands that specifies a computation.
 
 <img src = "img/expression.png">
+
+> ***Expression*** <u>cannot</u> contain undeclared variables
+
+### ***Global scope and global initializations***
+Global initializations must be done before entering `main` function.
+
+Every function and global variable is in global scope despite it's location.
+
+    main()
+    {
+        x = GLOBAL_below_main + foo_below_main();
+
+        return 0;
+    }
+
+    GLOBAL_below_main = 5;
+
+    foo_below_main()
+    {
+        return 2;
+    }
+
+<img src = "img/scope.png">
+
+> `GLOBAL_below_main` and `foo_below_main` are used in `main`, but they appear later in program.
 
 ### **Conditional statement**
 Executes positive or negative decision depending on condition.
@@ -274,21 +300,47 @@ First initializer is written in memory for variable itself. Every next initializ
 
 <img src = "img/assignment.png">
 
+    main()
+    {
+        x = 1;
+        
+        return 0;
+    }
+
+<img src = "img/assignment_ex1.png">
+
+    main()
+    {
+        x[777] = {1, 2, 3, 4, 5 * 11};
+
+        return 0;
+    }
+
+<img src = "img/assignment_ex2.png">
+
+    main()
+    {
+        x = {1, 2, 3};
+
+        return 0;
+    }
+
+<img src = "img/assignment_ex3.png">
+
 > If index is specified variable is interpreted as array.
 
 > If variable wasn't declared before, index is interpreted as size of array. Otherwise index is interpreted as relative shift before assignment.
 
-> `=` is not an operator, it doesn't return any output. Therefore, it can't be used in ***expression***
----
+> `=` is not an operator, it doesn't return any output. Therefore, it <u>cannot</u> be used in ***expression***
 
-## Explanations
+### ***Index***
+Index is an optional descendant of variable which is interpreted depending on context.
 
-### **Arrays**
-Tree does not distinguish between variables and arrays. Index can be specified for variable.
+Tree does not distinguish between variables and arrays. Index can be specified for any variable.
 
 * **assignment**, variable wasn't declared
 
-    Static memory of *index* size should be allocated. 
+    Static memory of *index* size should be allocated.
 
 * **assignment**, variable was declared
 
@@ -302,10 +354,4 @@ Tree does not distinguish between variables and arrays. Index can be specified f
 
     *Index* should be used as shift in memory relative to variable.
 
-### **Global scope**
-Every function and global variable is in global scope despite it's location.    
-
-### **Global initializations**
-Global initializations must be done before entering `main` function.
-
-
+<img src = "img/arrays_ex.png">

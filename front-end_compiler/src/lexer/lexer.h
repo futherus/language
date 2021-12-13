@@ -81,8 +81,8 @@ struct Token
 lexer_err lexer_init(char* data, ptrdiff_t data_sz);
 lexer_err lexer_dstr();
 
-lexer_err consume(Token* tok);
-lexer_err peek(Token* tok, ptrdiff_t offset);
+void consume(Token* tok);
+void peek(Token* tok, ptrdiff_t offset);
 
 char* demangle(const Token* tok);
 

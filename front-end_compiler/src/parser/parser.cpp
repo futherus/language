@@ -6,12 +6,14 @@
 
 static Tree* TREE = nullptr;
 
-static void syntax_error()
-{
-    printf("SYNTAX ERROR\n");
-    tree_dump(TREE, "SYNTAX_ERROR");
-    exit(1);
-}
+#define syntax_error(TOK)                               \
+{                                                       \
+    printf("SYNTAX ERROR: %s\n", demangle(TOK));        \
+    printf("in %s (%d)\n", __FUNCTION__, __LINE__);     \
+                                                        \
+    tree_dump(TREE, "SYNTAX_ERROR\n");                  \
+    exit(1);                                            \
+}                                                       \
 
 /*
     Grammar:
@@ -19,7 +21,8 @@ static void syntax_error()
                        '(' Expression ')' |
                        TYPE_NUMBER |
                        TYPE_ID |                                                  //Variable                   //1)TYPE_ID->TYPE_VAR
-                       TYPE_ID '(' Expression {',' Expression}* ')' |             //Function call              //1)TYPE_ID->TYPE_FUNC
+                       TYPE_ID '>>' Primary |                                     //Array access               //1)TYPE_ID->TYPE_VAR
+                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |             //Function call              //1)TYPE_ID->TYPE_FUNC
                        TYPE_EMB  '(' Expression ')'                               //Embedded-function call
 
         Term       ::= Primary {['/' '*'] Primary}*
@@ -30,7 +33,8 @@ static void syntax_error()
         Conditional     ::= 'if'    '(' Expression ')' '{' {Statement}+ '}' {'else' '{' {Statement}+ '}'}?
         Cycle           ::= 'while' '(' Expression ')' '{' {Statement}+ '}'
         Terminational   ::= 'return' Expression ';'
-        Assign          ::= {'const'}? TYPE_ID '=' Expression ';'
+        Assign          ::= {'const'}? TYPE_ID {'[' Expression ']'}? '=' '{' Expression {',' Expression}* '}' ';' |
+                                                                         Expression ';'
         
         Statement  ::= Conditional |
                        Cycle  |
@@ -38,9 +42,9 @@ static void syntax_error()
                        Assign |
                        Expression ';'
 
-        //Define     ::= TYPE_ID '(' {TYPE_ID}? {',' TYPE_ID}* ')' '{' {Statement}+ '}'  //1)TYPE_ID->TYPE_FUNC, 2+)TYPE_ID->TYPE_VAR
-                                     ^~~~~~~~~~
-        //General    ::= {Define | Assign}+
+        Define     ::= TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'  //1)TYPE_ID->TYPE_FUNC, 2+)TYPE_ID->TYPE_VAR
+
+        General    ::= {Define | Assign}+
 */
  
 static parser_err primary(Node** base);
@@ -53,8 +57,8 @@ static parser_err assign(Node** base);
 static parser_err statement(Node** base);
 static parser_err general(Node** base);
 
-#define MK_AUX(BASE, AUX) tree_add_wrap((BASE), TYPE_AUX, (AUX))
-#define MK_KEY(BASE, KEY) tree_add_wrap((BASE), TYPE_KEYWORD, (KEY))
+#define MK_AUX(BASE, AUX) ASSERT_RET$(!tree_add_wrap((BASE), TYPE_AUX,     (AUX)), PARSER_TREE_FAIL)
+#define MK_KEY(BASE, KEY) ASSERT_RET$(!tree_add_wrap((BASE), TYPE_KEYWORD, (KEY)), PARSER_TREE_FAIL)
 static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
 {
     Token tok    = {};
@@ -66,7 +70,7 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
 
 #define MK_NODE(BASE, TOK) ASSERT_RET$(!tree_add(TREE, (BASE), (TOK)), PARSER_TREE_FAIL)
 
-  static parser_err primary(Node** base)
+static parser_err primary(Node** base)
 {
     Token tok = {};
     consume(&tok);
@@ -82,7 +86,7 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
 
         consume(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-            syntax_error();
+            syntax_error(&tok);
     }
     else if(tok.type == TYPE_NUMBER)
     {
@@ -105,22 +109,37 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
 
             consume(&tok);
 
-            MK_AUX(base, TOK_PARAMETER);
-            expression(&(*base)->right);
-
-            consume(&tok);
-            while(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
+            peek(&tok, 0);
+            if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
             {
-                Node* tmp = *base;
                 MK_AUX(base, TOK_PARAMETER);
                 expression(&(*base)->right);
-                (*base)->left = tmp;
 
-                consume(&tok);
+                peek(&tok, 0);
+                while(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
+                {
+                    consume(&tok);
+
+                    Node* tmp = *base;
+                    MK_AUX(base, TOK_PARAMETER);
+                    expression(&(*base)->right);
+                    (*base)->left = tmp;
+
+                    peek(&tok, 0);
+                }
             }
 
+            consume(&tok);
             if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-                syntax_error();
+                syntax_error(&tok);
+        }
+        else if(probe.type == TYPE_OP && probe.val.op == TOK_SHIFT)
+        {
+            tok.type = TYPE_VAR;
+            MK_NODE(base, &tok);
+
+            consume(&tok);
+            primary(&(*base)->right);
         }
         else
         {
@@ -134,23 +153,23 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
 
         consume(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-            syntax_error();
+            syntax_error(&tok);
         
         expression(&(*base)->right);
 
         consume(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-            syntax_error();
+            syntax_error(&tok);
     }
     else
     {
-        syntax_error();
+        syntax_error(&tok);
     }
 
     return PARSER_NOERR;
 }
 
-  static parser_err term(Node** base)
+static parser_err term(Node** base)
 {
     primary(base);
 
@@ -174,7 +193,7 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
     return PARSER_NOERR;
 }
 
-  static parser_err ariphmetic(Node** base)
+static parser_err ariphmetic(Node** base)
 {
     term(base);
 
@@ -198,7 +217,7 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
     return PARSER_NOERR;
 }
 
-  static parser_err boolean(Node** base)
+static parser_err boolean(Node** base)
 {
     ariphmetic(base);
 
@@ -224,7 +243,7 @@ static inline tree_err tree_add_wrap(Node** base, token_type type, int val)
     return PARSER_NOERR;
 }
 
-  static parser_err expression(Node** base)
+static parser_err expression(Node** base)
 {
     boolean(base);
 
@@ -260,7 +279,7 @@ static parser_err assign(Node** base)
     }
 
     if(tok.type != TYPE_ID)
-        syntax_error();
+        syntax_error(&tok);
     
     Node* tmp = *base;
     tok.type = TYPE_VAR;
@@ -268,8 +287,19 @@ static parser_err assign(Node** base)
     (*base)->left = tmp;
 
     consume(&tok);
+    if(tok.type == TYPE_OP && tok.val.op == TOK_LQPAR)
+    {
+        expression(&(*base)->right);
+
+        consume(&tok);
+        if(tok.type != TYPE_OP && tok.val.op != TOK_RQPAR)
+            syntax_error(&tok);
+        
+        consume(&tok);
+    }
+
     if(tok.type != TYPE_OP || tok.val.op != TOK_ASSIGN)
-        syntax_error();
+        syntax_error(&tok);
     
     tmp = *base;
     MK_NODE(base, &tok);
@@ -277,42 +307,67 @@ static parser_err assign(Node** base)
 
     MK_AUX(&(*base)->right, TOK_INITIALIZER);
 
-    expression(&(*base)->right->right);
+    peek(&tok, 0);
+    if(tok.type == TYPE_OP && tok.val.op == TOK_LFPAR)
+    {
+        consume(&tok);
+
+        expression(&(*base)->right->right);
+
+        consume(&tok);
+        while(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
+        {
+            tmp = (*base)->right;
+            MK_AUX(&(*base)->right, TOK_INITIALIZER);
+
+            expression(&(*base)->right->right);
+            (*base)->right->left = tmp;
+
+            consume(&tok);
+        }
+
+        if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
+            syntax_error(&tok);
+    }
+    else
+    {
+        expression(&(*base)->right->right);
+    }
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error();
+        syntax_error(&tok);
     
     return PARSER_NOERR;
 }
 
-  static parser_err conditional(Node** base)
+static parser_err conditional(Node** base)
 {
     assert(base);
 
     Token tok = {};
     consume(&tok);
     if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_IF)
-        syntax_error();
+        syntax_error(&tok);
     
     MK_NODE(base, &tok);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     expression(&(*base)->left);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     MK_AUX(&(*base)->right, TOK_DECISION);
     base = &(*base)->right;
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     peek(&tok, 0);
     while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
@@ -327,7 +382,7 @@ static parser_err assign(Node** base)
     
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     peek(&tok, 0);
     if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_ELSE)
@@ -336,7 +391,7 @@ static parser_err assign(Node** base)
     consume(&tok);
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     peek(&tok, 0);
     while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
@@ -351,35 +406,35 @@ static parser_err assign(Node** base)
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     return PARSER_NOERR;
 }
 
-  static parser_err cycle(Node** base)
+static parser_err cycle(Node** base)
 {
     assert(base);
 
     Token tok = {};
     consume(&tok);
     if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_WHILE)
-        syntax_error();
+        syntax_error(&tok);
 
     MK_NODE(base, &tok);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     expression(&(*base)->left);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error();
+        syntax_error(&tok);
         
     base = &(*base)->right;
 
@@ -396,12 +451,12 @@ static parser_err assign(Node** base)
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     return PARSER_NOERR;
 }
 
-  static parser_err terminational(Node** base)
+static parser_err terminational(Node** base)
 {
     assert(base);
 
@@ -409,7 +464,7 @@ static parser_err assign(Node** base)
     consume(&tok);
 
     if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_RETURN)
-        syntax_error();
+        syntax_error(&tok);
     
     MK_NODE(base, &tok);
 
@@ -417,7 +472,7 @@ static parser_err assign(Node** base)
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error();
+        syntax_error(&tok);
 
     return PARSER_NOERR;
 }
@@ -452,19 +507,21 @@ static parser_err statement(Node** base)
             return PARSER_NOERR;
         }
     }
-
-    peek(&tok, 1);
-    if(tok.type == TYPE_OP && tok.val.op == TOK_ASSIGN)
+    
+    if(tok.type == TYPE_ID)
     {
-        assign(base);
-        return PARSER_NOERR;
+        peek(&tok, 1);
+        if(tok.type == TYPE_OP && (tok.val.op == TOK_ASSIGN || tok.val.op == TOK_LQPAR))
+        {
+            assign(base);
+            return PARSER_NOERR;
+        }
     }
     
     expression(base);
-
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error();
+        syntax_error(&tok);
     
     return PARSER_NOERR;
 }
@@ -479,14 +536,14 @@ static parser_err define(Node** base)
     Token tok = {};
     consume(&tok);
     if(tok.type != TYPE_ID)
-        syntax_error();
+        syntax_error(&tok);
     
     tok.type = TYPE_FUNC;
     MK_NODE(&(*base)->left->left, &tok);
     
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error();
+        syntax_error(&tok);
     
     peek(&tok, 0);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -504,7 +561,7 @@ static parser_err define(Node** base)
 
         consume(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
-            syntax_error();
+            syntax_error(&tok);
 
         expression(&(*base)->left->right->right);
         (*base)->left->right->left = tmp;
@@ -514,11 +571,11 @@ static parser_err define(Node** base)
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     peek(&tok, 0);
     while(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
@@ -534,7 +591,7 @@ static parser_err define(Node** base)
 
     consume(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error();
+        syntax_error(&tok);
 
     return PARSER_NOERR;
 
