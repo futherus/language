@@ -342,16 +342,22 @@ Tree does not distinguish between variables and arrays. Index can be specified f
 
     Static memory of *index* size should be allocated.
 
+<img src = "img/index_assignment_notdecl.png">
+
 * **assignment**, variable was declared
 
     *Index* should be used as shift in memory relative to variable.
+
+<img src = "img/index_assignment_decl.png">
 
 * **expression**, variable wasn't declared
 
     Error state. It should be guaranteed that no such mistakes are left in stored tree.
 
+<img src = "img/index_expression_notdecl.png">
+
 * **expression**, variable was declared
 
     *Index* should be used as shift in memory relative to variable.
 
-<img src = "img/arrays_ex.png">
+<img src = "img/index_expression_decl.png">
