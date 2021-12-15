@@ -1,1 +1,0 @@
-DEF_EMB(0x2AD3AF25B460D6BCLL, "my_sin", "sin", SIN)

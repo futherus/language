@@ -7,27 +7,13 @@ digraph G{
     edge[minlen = 3, arrowsize = 2, penwidth = 1.5, color = green];
     node[shape = rectangle, style = "filled", fillcolor = "#C5D0E6", fontsize = 30,
          color = "#C5D0E6", penwidth = 5];
-node0000013f5e2e4f70[label = "statement", shape = parallelogram, color = black]
-node0000013f5e2e4f70 -> node0000013f5e2e4f98 [color = orange];
-node0000013f5e2e4fe8[label = "main", shape = octagon, color = blue]
-node0000013f5e2e4fc0[label = "function", shape = parallelogram, color = black]
-node0000013f5e2e4fc0 -> node0000013f5e2e4fe8 [color = green];
-node0000013f5e2e4f98[label = "define", shape = parallelogram, color = black]
-node0000013f5e2e4f98 -> node0000013f5e2e4fc0 [color = green];
-node0000013f5e2e4f98 -> node0000013f5e2e50d8 [color = orange];
-node0000013f5e2e5010[label = "statement", shape = parallelogram, color = black]
-node0000013f5e2e5010 -> node0000013f5e2e5060 [color = orange];
-node0000013f5e2e5038[label = "y", shape = box, color = blue]
-node0000013f5e2e5060[label = "=", shape = diamond, color = red]
-node0000013f5e2e5060 -> node0000013f5e2e5038 [color = green];
-node0000013f5e2e5060 -> node0000013f5e2e5088 [color = orange];
-node0000013f5e2e5088[label = "x", shape = box, color = blue]
-node0000013f5e2e5088 -> node0000013f5e2e50b0 [color = orange];
-node0000013f5e2e50b0[label = "5", shape = oval, color = yellow]
-node0000013f5e2e50d8[label = "statement", shape = parallelogram, color = black]
-node0000013f5e2e50d8 -> node0000013f5e2e5010 [color = green];
-node0000013f5e2e50d8 -> node0000013f5e2e5100 [color = orange];
-node0000013f5e2e5100[label = "return", shape = parallelogram, color = black]
-node0000013f5e2e5100 -> node0000013f5e2e5128 [color = orange];
-node0000013f5e2e5128[label = "0", shape = oval, color = yellow]
+node000002965a6a4cd0[label = "statement", shape = parallelogram, color = black]
+node000002965a6a4cd0 -> node000002965a6a4cf0 [color = orange];
+node000002965a6a4d30[label = "main", shape = octagon, color = blue]
+node000002965a6a4d10[label = "function", shape = parallelogram, color = black]
+node000002965a6a4d10 -> node000002965a6a4d30 [color = green];
+node000002965a6a4d10 -> node000002965a6a4d50 [color = orange];
+node000002965a6a4d50[label = "parameter", shape = parallelogram, color = black]
+node000002965a6a4cf0[label = "define", shape = parallelogram, color = black]
+node000002965a6a4cf0 -> node000002965a6a4d10 [color = green];
 }
