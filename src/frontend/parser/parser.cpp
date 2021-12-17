@@ -7,8 +7,7 @@
 static Tree*        TREE_        = nullptr;
 static Token_array* TOKEN_ARRAY_ = nullptr;
 
-#define syntax_error(TOK) ASSERT_RET$(0, PARSER_SYNTAX_ERR)
-
+#define syntax_error(TOK) ASSERT$(0, Syntax error, return PARSER_SYNTAX_ERR; );
 #define SYNTAX(CONDITION) PASS$(CONDITION, return PARSER_SYNTAX_ERR; )
 
 /*
@@ -101,12 +100,11 @@ static parser_err primary(Node** base)
         if(probe.type == TYPE_OP && probe.val.op == TOK_LRPAR)
         {
             MK_AUX(base, TOK_CALL);
-            MK_AUX(&(*base)->right, TOK_FUNCTION);
 
             tok.type = TYPE_FUNC;
-            MK_NODE(&(*base)->right->left, &tok);
+            MK_NODE(&(*base)->left, &tok);
             
-            base = &(*base)->right->right;
+            base = &(*base)->right;
 
             CONSUME(&tok);
 
@@ -641,7 +639,9 @@ parser_err parse(Tree* tree, Token_array* tok_arr)
 
     MSG$("\n\n----------------------Parsing finished----------------------\n\n");
 
-    token_array_dump(tok_arr);
+    if(err)
+        token_array_dump(tok_arr);
+        
     tree_dump(TREE_, "DUMP");
 
     TREE_        = nullptr;

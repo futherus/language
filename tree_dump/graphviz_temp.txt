@@ -7,13 +7,123 @@ digraph G{
     edge[minlen = 3, arrowsize = 2, penwidth = 1.5, color = green];
     node[shape = rectangle, style = "filled", fillcolor = "#C5D0E6", fontsize = 30,
          color = "#C5D0E6", penwidth = 5];
-node000002965a6a4cd0[label = "statement", shape = parallelogram, color = black]
-node000002965a6a4cd0 -> node000002965a6a4cf0 [color = orange];
-node000002965a6a4d30[label = "main", shape = octagon, color = blue]
-node000002965a6a4d10[label = "function", shape = parallelogram, color = black]
-node000002965a6a4d10 -> node000002965a6a4d30 [color = green];
-node000002965a6a4d10 -> node000002965a6a4d50 [color = orange];
-node000002965a6a4d50[label = "parameter", shape = parallelogram, color = black]
-node000002965a6a4cf0[label = "define", shape = parallelogram, color = black]
-node000002965a6a4cf0 -> node000002965a6a4d10 [color = green];
+node000002287cd25ea0[label = "statement", shape = parallelogram, color = black]
+node000002287cd25ea0 -> node000002287cd25ee0 [color = orange];
+node000002287cd25ec0[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd25ee0[label = "=", shape = diamond, color = red]
+node000002287cd25ee0 -> node000002287cd25ec0 [color = green];
+node000002287cd25ee0 -> node000002287cd25f00 [color = orange];
+node000002287cd25f00[label = "1", shape = oval, color = yellow]
+node000002287cd25f20[label = "statement", shape = parallelogram, color = black]
+node000002287cd25f20 -> node000002287cd25ea0 [color = green];
+node000002287cd25f20 -> node000002287cd25f60 [color = orange];
+node000002287cd25f40[label = "y", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd25f60[label = "=", shape = diamond, color = red]
+node000002287cd25f60 -> node000002287cd25f40 [color = green];
+node000002287cd25f60 -> node000002287cd25f80 [color = orange];
+node000002287cd25f80[label = "2", shape = oval, color = yellow]
+node000002287cd25fa0[label = "statement", shape = parallelogram, color = black]
+node000002287cd25fa0 -> node000002287cd25f20 [color = green];
+node000002287cd25fa0 -> node000002287cd26000 [color = orange];
+node000002287cd25fc0[label = "main", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd25fe0[label = "function", shape = parallelogram, color = black]
+node000002287cd25fe0 -> node000002287cd25fc0 [color = green];
+node000002287cd26000[label = "define", shape = parallelogram, color = black]
+node000002287cd26000 -> node000002287cd25fe0 [color = green];
+node000002287cd26000 -> node000002287cd263e0 [color = orange];
+node000002287cd26020[label = "statement", shape = parallelogram, color = black]
+node000002287cd26020 -> node000002287cd26060 [color = orange];
+node000002287cd26040[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26060[label = "=", shape = diamond, color = red]
+node000002287cd26060 -> node000002287cd26040 [color = green];
+node000002287cd26060 -> node000002287cd26080 [color = orange];
+node000002287cd26080[label = "y", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd260a0[label = "statement", shape = parallelogram, color = black]
+node000002287cd260a0 -> node000002287cd26020 [color = green];
+node000002287cd260a0 -> node000002287cd260e0 [color = orange];
+node000002287cd260c0[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd260e0[label = "if", shape = parallelogram, color = black]
+node000002287cd260e0 -> node000002287cd260c0 [color = green];
+node000002287cd260e0 -> node000002287cd26160 [color = orange];
+node000002287cd26100[label = "statement", shape = parallelogram, color = black]
+node000002287cd26100 -> node000002287cd26120 [color = orange];
+node000002287cd26120[label = "return", shape = parallelogram, color = black]
+node000002287cd26120 -> node000002287cd26140 [color = orange];
+node000002287cd26140[label = "2", shape = oval, color = yellow]
+node000002287cd26160[label = "decision", shape = parallelogram, color = black]
+node000002287cd26160 -> node000002287cd26100 [color = green];
+node000002287cd26160 -> node000002287cd26260 [color = orange];
+node000002287cd26180[label = "statement", shape = parallelogram, color = black]
+node000002287cd26180 -> node000002287cd261c0 [color = orange];
+node000002287cd261a0[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd261c0[label = "while", shape = parallelogram, color = black]
+node000002287cd261c0 -> node000002287cd261a0 [color = green];
+node000002287cd261c0 -> node000002287cd261e0 [color = orange];
+node000002287cd261e0[label = "statement", shape = parallelogram, color = black]
+node000002287cd261e0 -> node000002287cd26220 [color = orange];
+node000002287cd26200[label = "y", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26220[label = "=", shape = diamond, color = red]
+node000002287cd26220 -> node000002287cd26200 [color = green];
+node000002287cd26220 -> node000002287cd26240 [color = orange];
+node000002287cd26240[label = "y", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26260[label = "statement", shape = parallelogram, color = black]
+node000002287cd26260 -> node000002287cd26180 [color = green];
+node000002287cd26260 -> node000002287cd26280 [color = orange];
+node000002287cd26280[label = "return", shape = parallelogram, color = black]
+node000002287cd26280 -> node000002287cd262a0 [color = orange];
+node000002287cd262a0[label = "3", shape = oval, color = yellow]
+node000002287cd262c0[label = "statement", shape = parallelogram, color = black]
+node000002287cd262c0 -> node000002287cd260a0 [color = green];
+node000002287cd262c0 -> node000002287cd26300 [color = orange];
+node000002287cd262e0[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26300[label = "while", shape = parallelogram, color = black]
+node000002287cd26300 -> node000002287cd262e0 [color = green];
+node000002287cd26300 -> node000002287cd26320 [color = orange];
+node000002287cd26320[label = "statement", shape = parallelogram, color = black]
+node000002287cd26320 -> node000002287cd26360 [color = orange];
+node000002287cd26340[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26360[label = "=", shape = diamond, color = red]
+node000002287cd26360 -> node000002287cd26340 [color = green];
+node000002287cd26360 -> node000002287cd263a0 [color = orange];
+node000002287cd26380[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd263a0[label = "-", shape = diamond, color = red]
+node000002287cd263a0 -> node000002287cd26380 [color = green];
+node000002287cd263a0 -> node000002287cd263c0 [color = orange];
+node000002287cd263c0[label = "1", shape = oval, color = yellow]
+node000002287cd263e0[label = "statement", shape = parallelogram, color = black]
+node000002287cd263e0 -> node000002287cd262c0 [color = green];
+node000002287cd263e0 -> node000002287cd26400 [color = orange];
+node000002287cd26400[label = "return", shape = parallelogram, color = black]
+node000002287cd26400 -> node000002287cd26420 [color = orange];
+node000002287cd26420[label = "1", shape = oval, color = yellow]
+node000002287cd26440[label = "statement", shape = parallelogram, color = black]
+node000002287cd26440 -> node000002287cd25fa0 [color = green];
+node000002287cd26440 -> node000002287cd264a0 [color = orange];
+node000002287cd26460[label = "foo", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26480[label = "function", shape = parallelogram, color = black]
+node000002287cd26480 -> node000002287cd26460 [color = green];
+node000002287cd264a0[label = "define", shape = parallelogram, color = black]
+node000002287cd264a0 -> node000002287cd26480 [color = green];
+node000002287cd264a0 -> node000002287cd265a0 [color = orange];
+node000002287cd264c0[label = "statement", shape = parallelogram, color = black]
+node000002287cd264c0 -> node000002287cd26500 [color = orange];
+node000002287cd264e0[label = "a", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26500[label = "=", shape = diamond, color = red]
+node000002287cd26500 -> node000002287cd264e0 [color = green];
+node000002287cd26500 -> node000002287cd26520 [color = orange];
+node000002287cd26520[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26540[label = "statement", shape = parallelogram, color = black]
+node000002287cd26540 -> node000002287cd264c0 [color = green];
+node000002287cd26540 -> node000002287cd26580 [color = orange];
+node000002287cd26560[label = "foo", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd26580[label = "call", shape = parallelogram, color = black]
+node000002287cd26580 -> node000002287cd26560 [color = green];
+node000002287cd265a0[label = "statement", shape = parallelogram, color = black]
+node000002287cd265a0 -> node000002287cd26540 [color = green];
+node000002287cd265a0 -> node000002287cd265e0 [color = orange];
+node000002287cd265c0[label = "x", shape = doubleoctagon, color = red, penwidth = 10]
+node000002287cd265e0[label = "=", shape = diamond, color = red]
+node000002287cd265e0 -> node000002287cd265c0 [color = green];
+node000002287cd265e0 -> node000002287cd26600 [color = orange];
+node000002287cd26600[label = "y", shape = doubleoctagon, color = red, penwidth = 10]
 }

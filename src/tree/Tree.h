@@ -40,7 +40,6 @@ enum tree_err
     TREE_REINIT     = 3,
     TREE_NOTINIT    = 4,
     TREE_STACK_FAIL = 5,
-    TREE_READ_FAIL  = 6,
 };
 
 tree_err tree_dstr(Tree* tree);

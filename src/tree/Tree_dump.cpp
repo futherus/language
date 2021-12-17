@@ -198,7 +198,7 @@ void tree_dump(Tree* tree, const char msg[], tree_err errcode)
     PRINT("\n\n\n");
     tree_graph_dump_(tree);
 
-    PRINT(R"(<img src = ")" "%s" R"(" alt = "Graphical dump" height = 720>)", graphviz_png_());
+    PRINT(R"(<img src = ")" "%s" R"(" alt = "Graphical dump" height = 1080>)", graphviz_png_());
 
     PRINT("<span class = \"title\">\n\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n</span>");
 }

@@ -5,14 +5,14 @@ SRCFLDR := ../
 OBJFLDR := ../../obj/
 BINFLDR := ../../bin/
 
-VPATH = $(SRCFLDR) $(SRCFLDR)/tree $(SRCFLDR)/token $(SRCFLDR)/dumpsystem $(SRCFLDR)/frontend $(SRCFLDR)/frontend/lexer $(SRCFLDR)/frontend/parser $(SRCFLDR)/args
+VPATH = $(SRCFLDR) $(SRCFLDR)/tree $(SRCFLDR)/token $(SRCFLDR)/dumpsystem $(SRCFLDR)/backend $(SRCFLDR)/args $(SRCFLDR)/backend/nametable
 
-SRC := frontend.cpp lexer.cpp parser.cpp Tree.cpp Tree_dump.cpp Tree_write.cpp dumpsystem.cpp Token.cpp Token_dump.cpp args.cpp
+SRC := backend.cpp generator.cpp nametable.cpp Tree_read.cpp dumpsystem.cpp Token.cpp Tree.cpp Token_dump.cpp Tree_dump.cpp nametable_dump.cpp args.cpp
 OBJ := $(SRC:.cpp=.o)
-TARGET := $(BINFLDR)/frontend.exe
+TARGET := $(BINFLDR)/backend.exe
 
 all: build
-	.\$(TARGET) --src code.txt --dst tree.txt
+	.\$(TARGET) --src tree.txt --dst asm.txt
 
 build: $(OBJ)
 	$(CXX) $(addprefix $(OBJFLDR), $(OBJ)) -o $(TARGET)

@@ -102,6 +102,17 @@ FILE* dumpsystem_get_stream_(int descriptor)
 }
 #undef SET_FILE
 
+FILE* dumpsystem_get_opened_stream()
+{
+    for(size_t iter = 1; iter < DUMPSTREAM_CAP; iter++)
+    {
+        if(DMP.arr[iter].state == 1)
+            return DMP.arr[iter].stream;
+    }
+    
+    return stderr;
+}
+
 static void dumpsystem_close_streams_()
 {
     for(int iter = DESCR_stderr + 1; iter < DESCR_END; iter++)

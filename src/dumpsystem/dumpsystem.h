@@ -11,9 +11,9 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
     {                                                                                 \
         if(!(CONDITION__))                                                            \
         {                                                                             \
-            fprintf(stderr, "ERROR: %s\n", #ERROR__);                                 \
+            fprintf(stderr, "\x1b[31;1mERROR:\x1b[0m %s\n", #ERROR__);                \
                                                                                       \
-            FILE* stream__ = dumpsystem_get_stream_(DUMPSYSTEM_DEFAULT_STREAM);       \
+            FILE* stream__ = dumpsystem_get_opened_stream();                          \
             if(stream__ != nullptr)                                                   \
             {                                                                         \
                 fprintf(stream__, "<span class = \"error\">ERROR: %s\n</span>"        \
@@ -34,7 +34,7 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
     {                                                                                 \
         if(!(CONDITION__))                                                            \
         {                                                                             \
-            FILE* stream__ = dumpsystem_get_stream_(DUMPSYSTEM_DEFAULT_STREAM);       \
+            FILE* stream__ = dumpsystem_get_opened_stream();                          \
             if(stream__ != nullptr)                                                   \
             {                                                                         \
                 fprintf(stream__, "\t\t\t\tat %s:%d:%s\n",                            \
@@ -48,7 +48,7 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
 
 #define LOG$(MESSAGE__, ...)                                                          \
     {                                                                                 \
-        FILE* stream__ = dumpsystem_get_stream_(DUMPSYSTEM_DEFAULT_STREAM);           \
+        FILE* stream__ = dumpsystem_get_opened_stream();                              \
         if(stream__ != nullptr)                                                       \
         {                                                                             \
             fprintf(stream__, "<span class = \"title\">" MESSAGE__ " %s\n</span>"     \
@@ -60,10 +60,10 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
 
 #define MSG$(MESSAGE__, ...)                                                          \
     {                                                                                 \
-        FILE* stream__ = dumpsystem_get_stream_(DUMPSYSTEM_DEFAULT_STREAM);           \
+        FILE* stream__ = dumpsystem_get_opened_stream();                              \
         if(stream__ != nullptr)                                                       \
         {                                                                             \
-            fprintf(stream__, "<span class = \"msg\">" MESSAGE__ " \n</span>",      \
+            fprintf(stream__, "<span class = \"msg\">" MESSAGE__ " \n</span>",        \
                     ##__VA_ARGS__);                                                   \
             fflush(stream__);                                                         \
         }                                                                             \
@@ -85,5 +85,6 @@ enum dumpsystem_descriptors_
 #define dumpsystem_get_stream(DESCRNAME) dumpsystem_get_stream_(DESCR_##DESCRNAME)
 
 FILE* dumpsystem_get_stream_(int descriptor);
+FILE* dumpsystem_get_opened_stream();
 
 #endif // DUMP_SYSTEM_H

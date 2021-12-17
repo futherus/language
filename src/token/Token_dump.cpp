@@ -40,7 +40,7 @@ void token_array_dump(Token_array* tok_arr)
     
     FILE* stream = DUMP_STREAM;
     
-    PRINT("<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n"
+    PRINT("\n\n<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n"
           "<tr><th colspan=\"3\" class = \"title\">Token array</th></tr>\n");
     
     PRINT("<tr><td colspan=\"3\">\n\tsize: %lld\n</td></tr>\n"
@@ -48,6 +48,8 @@ void token_array_dump(Token_array* tok_arr)
           "<tr><td colspan=\"3\">\n\tposition: %lld\n</td></tr>\n"
           "<tr><td colspan=\"3\">\n\tEOF: %lld\n</td></tr>\n",
           tok_arr->size, tok_arr->cap, tok_arr->pos, tok_arr->eof);
+
+    PRINT("<tr><th>name</th><th>std name</th><th>mangle</th></tr>\n");
 
     if(!tok_arr->data)
     {
@@ -104,7 +106,7 @@ void token_array_dump(Token_array* tok_arr)
                 }
                 break;
             
-            case TYPE_ID :
+            case TYPE_ID:
                 PRINT("<td>  %s  </td>\n<td>  [%p]  </td>\n<td>  TYPE_ID  </td>\n", tok_arr->data[iter].val.name, tok_arr->data[iter].val.name);
                 break;
             
@@ -129,7 +131,7 @@ void token_array_dump(Token_array* tok_arr)
         }
         PRINT("</tr>\n");
     }
-    PRINT("</tbody></table>\n");
+    PRINT("</tbody></table>\n\n\n");
 }
 
 #undef DEF_OP
@@ -152,6 +154,8 @@ void token_nametable_dump(Token_nametable* tok_table)
     PRINT("<tr><td colspan=\"2\">\n\tsize: %lld\n</td></tr>\n"
           "<tr><td colspan=\"2\">\n\tcapacity: %lld\n</td></tr>\n",
           tok_table->size, tok_table->cap);
+
+    PRINT("<tr><th>name</th><th>pointer</th></tr>\n");
 
     if(!tok_table->name_arr)
     {
