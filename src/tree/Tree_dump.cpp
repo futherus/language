@@ -9,6 +9,9 @@
 
 #include "Tree.h"
 
+static const long GRAPHVIZ_PNG_MAX_AMOUNT    = 20;
+static const long GRAPHVIZ_PNG_SECURE_AMOUNT = 3;
+
 static const char TREE_DUMPFILE_DIR[] = "logs";
 static const char TREE_DUMPFILE[] = "logs/tree_dump.html";
 
@@ -44,12 +47,13 @@ static char* graphviz_png_()
     do
     {
         iter++;
-        sprintf(filename, "%s_%ld.png", GRAPHVIZ_PNG_NAME, iter);
+        sprintf(filename, "%s/%s_%ld.png", TREE_DUMPFILE_DIR, GRAPHVIZ_PNG_NAME, iter);
         probe = fopen(filename, "r");
     }
     while(probe != nullptr);
-
     fclose(probe);
+
+    sprintf(filename, "%s_%ld.png", GRAPHVIZ_PNG_NAME, iter);
 
     return filename;
 }

@@ -17,9 +17,8 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
             if(stream__ != nullptr)                                                   \
             {                                                                         \
                 fprintf(stream__, "<span class = \"error\">ERROR: %s\n</span>"        \
-                                  "\t\t\t\tat %s:%d:%s\n",                            \
+                                  "\t\t\t\tat %s : %d : %s\n",                        \
                          #ERROR__, __FILE__, __LINE__, __PRETTY_FUNCTION__);          \
-                fflush(stream__);                                                     \
             }                                                                         \
                                                                                       \
             {ACTION__}                                                                \
@@ -37,9 +36,8 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
             FILE* stream__ = dumpsystem_get_opened_stream();                          \
             if(stream__ != nullptr)                                                   \
             {                                                                         \
-                fprintf(stream__, "\t\t\t\tat %s:%d:%s\n",                            \
+                fprintf(stream__, "\t\t\t\tat %s : %d : %s\n",                        \
                         __FILE__, __LINE__, __PRETTY_FUNCTION__);                     \
-                fflush(stream__);                                                     \
             }                                                                         \
                                                                                       \
             {ACTION__}                                                                \
@@ -54,7 +52,6 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
             fprintf(stream__, "<span class = \"title\">" MESSAGE__ " %s\n</span>"     \
                               "\t\t\t\tat %s : %d : %s\n",                            \
                     ##__VA_ARGS__, __func__, __FILE__, __LINE__, __PRETTY_FUNCTION__);\
-            fflush(stream__);                                                         \
         }                                                                             \
     }                                                                                 \
 
@@ -65,7 +62,6 @@ const int DUMPSYSTEM_DEFAULT_STREAM = 1;
         {                                                                             \
             fprintf(stream__, "<span class = \"msg\">" MESSAGE__ " \n</span>",        \
                     ##__VA_ARGS__);                                                   \
-            fflush(stream__);                                                         \
         }                                                                             \
     }                                                                                 \
 

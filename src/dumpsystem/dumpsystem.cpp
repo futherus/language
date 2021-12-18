@@ -5,7 +5,7 @@
 #include "dumpsystem.h"
 
 static const size_t TXT_TIME_CAP   = 512;
-static const size_t DUMPSTREAM_CAP = 16;
+static const size_t DUMPSTREAM_CAP = 8;
 
 static const char LOG_INTRO[] =
 R"(
@@ -60,8 +60,9 @@ static void dumpsystem_close_streams_();
         if(dmpstr->state == -1)                                                        \
         {                                                                              \
             dmpstr->stream = fopen(FILENAME, "w");                                     \
+            int buf_err = setvbuf(dmpstr->stream, nullptr, _IONBF, 0);                 \
                                                                                        \
-            if(dmpstr->stream == nullptr)                                              \
+            if(dmpstr->stream == nullptr || buf_err != 0)                              \
             {                                                                          \
                 dmpstr->state = -2;                                                    \
                 perror("Cannot open `" #FILENAME "` for dump");                        \

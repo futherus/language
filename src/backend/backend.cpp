@@ -47,32 +47,32 @@ int main(int argc, char* argv[])
     }
 
 TRY__
-    ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
-                                               BACKEND_INFILE_FAIL, FAIL__; );
+    CHECK__(get_file_sz_(infile_name, &file_sz) == -1,
+                                                         BACKEND_INFILE_FAIL);
 
     data = (char*) calloc(file_sz, sizeof(char));
-    ASSERT$(data,                              BACKEND_BAD_ALLOC, FAIL__; );
+    CHECK__(!data,                                       BACKEND_BAD_ALLOC);
 
     istream = fopen(infile_name, "r");
-    ASSERT$(istream,                           BACKEND_INFILE_FAIL, FAIL__; );
+    CHECK__(!istream,                                    BACKEND_INFILE_FAIL);
 
     file_sz = fread(data, sizeof(char), file_sz, istream);
-    ASSERT$(!ferror(istream),                  BACKEND_READ_FAIL, FAIL__; );
+    CHECK__(ferror(istream),                             BACKEND_READ_FAIL);
 
     fclose(istream);
     istream = nullptr;
 
     data = (char*) realloc(data, file_sz * sizeof(char));
-    ASSERT$(data,                              BACKEND_BAD_ALLOC, FAIL__; );
+    CHECK__(!data,                                       BACKEND_BAD_ALLOC);
 
-    tree_read(&tree, &tok_table, data, file_sz);
+    CHECK__(tree_read(&tree, &tok_table, data, file_sz), BACKEND_FORMAT_ERROR);
     tree_dump(&tree, "Dump");
     token_nametable_dump(&tok_table);
 
     ostream = fopen(outfile_name, "w");
-    ASSERT$(ostream,                           BACKEND_INFILE_FAIL, FAIL__; );
+    CHECK__(!ostream,                                    BACKEND_INFILE_FAIL);
 
-    generator(&tree, ostream);
+    CHECK__(generator(&tree, ostream),                   BACKEND_GENERATOR_FAIL);
 
     fclose(ostream);
     ostream = nullptr;
@@ -86,14 +86,14 @@ CATCH__
     
     if(ostream)
         fclose(ostream);
-
+    
 FINALLY__
     free(data);
 
     tree_dstr(&tree);
     token_nametable_dstr(&tok_table);
 
-    return 0;
+    return ERROR__;
 
 ENDTRY__
 }

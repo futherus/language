@@ -17,6 +17,7 @@ enum backend_err
     BACKEND_WRITE_FAIL     = 9,
     BACKEND_OUTFILE_FAIL   = 10,
     BACKEND_TREE_FAIL      = 11,
+    BACKEND_GENERATOR_FAIL = 12,
 };
 
 backend_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[], ptrdiff_t data_sz);

@@ -1,7 +1,7 @@
 #ifndef JUMPS_H
 #define JUMPS_H
 
-#define   TRY__                 goto try__; try__: { // int error__ = 0;
+#define   TRY__                 goto try__; try__: { int error__ = 0;
 #define   CHECK__(cond, err)    { if (cond)  { error__ = err; goto catch__; } }
 #define   ERROR__               (error__)
 #define   CATCH__               goto finally__; catch__:

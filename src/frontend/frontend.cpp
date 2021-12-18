@@ -49,23 +49,23 @@ int main(int argc, char* argv[])
     }
 
 TRY__
-    ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
-                                               FRONTEND_INFILE_FAIL, FAIL__; );
+    CHECK__(get_file_sz_(infile_name, &file_sz) == -1,
+                                               FRONTEND_INFILE_FAIL);
 
     data = (char*) calloc(file_sz, sizeof(char));
-    ASSERT$(data,                              FRONTEND_BAD_ALLOC, FAIL__; );
+    CHECK__(!data,                             FRONTEND_BAD_ALLOC);
 
     istream = fopen(infile_name, "r");
-    ASSERT$(istream,                           FRONTEND_INFILE_FAIL, FAIL__; );
+    CHECK__(!istream,                          FRONTEND_INFILE_FAIL);
 
     file_sz = fread(data, sizeof(char), file_sz, istream);
-    ASSERT$(!ferror(istream),                  FRONTEND_READ_FAIL, FAIL__; );
+    CHECK__(ferror(istream),                   FRONTEND_READ_FAIL);
 
     fclose(istream);
     istream = nullptr;
 
     data = (char*) realloc(data, file_sz * sizeof(char));
-    ASSERT$(data,                              FRONTEND_BAD_ALLOC, FAIL__; );
+    CHECK__(!data,                             FRONTEND_BAD_ALLOC);
 
     lexer_error = lexer(&tok_arr, &tok_table, data, file_sz);
 
@@ -75,15 +75,15 @@ TRY__
     token_nametable_dump(&tok_table);
     token_array_dump(&tok_arr);
 
-    ASSERT$(!lexer_error,                      FRONTEND_LEXER_FAIL, FAIL__; );
+    CHECK__(lexer_error,                       FRONTEND_LEXER_FAIL);
 
-    ASSERT$(!parse(&tree, &tok_arr),           FRONTEND_PARSER_FAIL, FAIL__; );
+    CHECK__(parse(&tree, &tok_arr),            FRONTEND_PARSER_FAIL);
 
     ostream = fopen(outfile_name, "w");
-    ASSERT$(ostream,                           FRONTEND_OUTFILE_FAIL, FAIL__; );
+    CHECK__(!ostream,                          FRONTEND_OUTFILE_FAIL);
 
     tree_write(&tree, ostream);
-    ASSERT$(!ferror(ostream),                  FRONTEND_WRITE_FAIL, FAIL__; );
+    CHECK__(ferror(ostream),                   FRONTEND_WRITE_FAIL);
 
     fclose(ostream);
     ostream = nullptr;
@@ -95,15 +95,14 @@ CATCH__
     if(ostream)
         fclose(ostream);
     
-FINALLY__
-    
     free(data);
-    
+
+FINALLY__
     tree_dstr(&tree);
     token_array_dstr(&tok_arr);
     token_nametable_dstr(&tok_table);
 
-    return 0;
+    return ERROR__;
 
 ENDTRY__
 }

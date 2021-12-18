@@ -1,3 +1,4 @@
-DEF_EMB("my_sin", "sin",   SIN)
-DEF_EMB("print",  "print", PRINT)
-DEF_EMB("scan",   "scan",  SCAN)
+DEF_EMB("сінус",      "sin",   SIN)
+DEF_EMB("адказаць",   "print", PRINT)
+DEF_EMB("запытаць",   "scan",  SCAN)
+DEF_EMB("намаляваць", "show",  SHOW)
