@@ -6,6 +6,13 @@
 #include "nametable/nametable.h"
 #include "../dumpsystem/dumpsystem.h"
 
+/*
+    rax -- return value
+    rbx -- memory stack pointer
+    rex -- embedded functions
+    rkx -- trash register
+*/
+
 static Function_table* FUNCS   = nullptr;
 static Variable_table* LOCALS  = nullptr;
 static Variable_table* GLOBALS = nullptr;
@@ -77,7 +84,58 @@ static generator_err embedded(Node* node)
     assert(node);
     assert(node->tok.type == TYPE_EMBED);
 
-    printf("Embedded");
+    if(!node->right)
+        semantic_error();
+
+    switch(node->tok.val.aux)
+    {
+        case TOK_SIN:
+        {
+            expression(node->right);
+
+            print_tab("pop rex\n");
+            print_tab("sin rex\n");
+            break;
+        }
+        case TOK_PRINT:
+        {
+            expression(node->right);
+
+            print_tab("out\n");
+
+            print_tab("push 0\n");
+            break;
+        }
+        case TOK_SCAN:
+        {
+            if(node->right->tok.type != TYPE_ID)
+                semantic_error();
+            
+            print_tab("in\n");
+
+            Variable* var = {};
+            if((var = vartable_find(LOCALS, node->right->tok.val.name)) != nullptr)
+            {
+                print_tab("pop [rbx + %lld]\n", var->offset);
+            }
+            else if((var = vartable_find(GLOBALS, node->right->tok.val.name)) != nullptr)
+            {
+                print_tab("pop [rcx + %lld]\n", var->offset);
+            }
+            else
+            {
+                semantic_error();
+            }
+
+            print_tab("push 0\n");
+
+            break;
+        }
+        default:
+        {
+            assert(0);
+        }
+    }
 
     return GENERATOR_NOERR;
 }
@@ -115,7 +173,6 @@ static generator_err oper(Node* node)
 }
 #undef PRINT_CMD
 
-
 static generator_err call_parameter(Node* node, ptrdiff_t n_args)
 {
     assert(node);
@@ -134,7 +191,11 @@ static generator_err call_parameter(Node* node, ptrdiff_t n_args)
     
     expression(node->right);
 
-    print_tab("pop [rbx + %lld]\n", n_args);
+    print_tab("pop [rbx + %lld]\n", vartable_end(LOCALS));
+
+    Variable call_var = {};
+    call_var.id = (char*) CALL_VARIABLE;
+    vartable_add(LOCALS, call_var);
 
     return GENERATOR_NOERR;
 }
@@ -155,21 +216,35 @@ static generator_err call(Node* node)
         semantic_error();
     
     print("\n");
-    print_tab("push rbx\n");
-    print_tab("push %lld\n", vartable_end(LOCALS));
-    print_tab("add\n");
-
-    print_tab("pop rbx\n");
     
+    ptrdiff_t call_offset = vartable_end(LOCALS);
     if((func->n_args == 0 && node->right) || (func->n_args > 0 && !node->right))
         semantic_error();
     
+    INDENTATION++;
+
     if(node->right)
         call_parameter(node->right, func->n_args);
+    
+    INDENTATION--;
+
+    print_tab("push rbx\n");
+    print_tab("push %lld\n", call_offset);
+    print_tab("add\n");
+    print_tab("pop rbx\n");
 
     print_tab("call %s\n", node->left->tok.val.name);
 
+    print_tab("push rbx\n");
+    print_tab("push %lld\n", call_offset);
+    print_tab("sub\n");
+    print_tab("pop rbx\n");
+
     print_tab("push rax\n\n");
+
+    MSG$("Function call %s", node->left->tok.val.name);
+    vartable_dump(LOCALS);
+    LOCALS->size -= func->n_args;
 
     return GENERATOR_NOERR;
 }
@@ -190,6 +265,12 @@ static generator_err expression(Node* node)
         return GENERATOR_NOERR;
     }
 
+    if(node->tok.type == TYPE_EMBED)
+    {
+        embedded(node);
+        return GENERATOR_NOERR;
+    }
+
     if(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_CALL)
     {
         call(node);
@@ -207,13 +288,7 @@ static generator_err expression(Node* node)
         oper(node);
         return GENERATOR_NOERR;
     }
-    
-    if(node->tok.type == TYPE_EMBED)
-    {
-        embedded(node);
-        return GENERATOR_NOERR;
-    }
-    
+        
     semantic_error();
 
     return GENERATOR_NOERR;
@@ -238,7 +313,7 @@ static generator_err conditional(Node* node)
 
     statement(node->right->left);
 
-    print_tab("jmp if_end_0x%p:\n", node);
+    print_tab("jmp if_end__0x%p\n", node);
     print("if_false__0x%p:\n", node);
 
     if(node->right->right)
@@ -270,7 +345,7 @@ static generator_err cycle(Node* node)
 
     statement(node->right);
 
-    print_tab("jmp while__0x%p:\n", node);
+    print_tab("jmp while__0x%p\n", node);
     print("while_end__0x%p:\n\n", node);
 
     INDENTATION--;
@@ -316,7 +391,7 @@ static generator_err assignment(Node* node, Variable_table* vartable)
         if(node->left->left->tok.type != TYPE_KEYWORD || node->left->left->tok.val.key != TOK_CONST)
             semantic_error();
 
-        var.is_const = true;            
+        var.is_const = true;          
     }
     
     if(node->left->right)
@@ -350,10 +425,11 @@ static generator_err assignment(Node* node, Variable_table* vartable)
         if(shift < 0)
             semantic_error();
 
-        var.size = shift + 1;
-        var.id   = node->left->tok.val.name;
+        var.size   = shift + 1;
+        var.id     = node->left->tok.val.name;
+        var.offset = vartable_end(vartable);
 
-        vartable_add(vartable, &var);
+        vartable_add(vartable, var);
 
         if(vartable == LOCALS)
             print_tab("pop [rbx + %lld", var.offset);
@@ -409,6 +485,7 @@ static generator_err statement(Node* node)
     }
 
     expression(node->right);
+    print_tab("pop rkx\n");
 
     return GENERATOR_NOERR;
 }
@@ -445,7 +522,7 @@ static generator_err parameter(Node* node)
     if(vartable_find(LOCALS, var.id) || vartable_find(GLOBALS, var.id) || functable_find(FUNCS, var.id))
         semantic_error();
 
-    vartable_add(LOCALS, &var);
+    vartable_add(LOCALS, var);
 
     return GENERATOR_NOERR;
 }
@@ -482,7 +559,7 @@ static generator_err fill_funcs_table(Node* node)
         semantic_error();
     
     func.id = ptr->tok.val.name;
-
+        
     ptr = node->right->left->right;
 
     while(ptr)
@@ -536,7 +613,7 @@ static generator_err generate_funcs(Node* node)
     if(node->right->tok.type != TYPE_AUX || node->right->tok.val.aux != TOK_DEFINE)
         return GENERATOR_NOERR;
     
-    print("\n\n\n%s__0x%p:\n", node->right->left->left->tok.val.name, node->right);
+    print("\n\n\n%s:\n", node->right->left->left->tok.val.name);
 
     INDENTATION++;
 
@@ -548,6 +625,10 @@ static generator_err generate_funcs(Node* node)
     if(stmnt)
         statement(stmnt);
 
+    if(stmnt->right->tok.type != TYPE_KEYWORD || stmnt->right->tok.val.key != TOK_RETURN)
+        semantic_error();
+
+    MSG$("End of function %s", node->right->left->left->tok.val.name);
     vartable_dump(LOCALS);
     LOCALS->size = 0;
 
@@ -572,13 +653,21 @@ generator_err generator(Tree* tree, FILE* ostream)
     FUNCS   = &funcs;
 
     fill_funcs_table(tree->root);
-
     functable_dump(&funcs);
+
+    print_tab("push %lld\n"
+              "pop rcx\n",
+               MEMORY_GLOBAL);
+
+    print_tab("push %lld\n"
+              "pop rbx\n",
+               MEMORY_LOCAL);
 
     generate_globals(tree->root);
     vartable_dump(&globals);
 
-    print_tab("call main__0x%p\n", func->);
+    print_tab("call main\n");
+
     print_tab("hlt\n");
 
     generate_funcs(tree->root);

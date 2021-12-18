@@ -8,9 +8,14 @@
 static const ptrdiff_t NAMETABLE_MIN_CAP     = 8;
 static const ptrdiff_t NAMETABLE_CAP_MULTPLR = 2;
 
+const char CALL_VARIABLE[] = "(((__call_variable__)))";
+
 Variable* vartable_find(Variable_table* table, const char* id)
 {
     assert(table && id);
+
+    if(id == CALL_VARIABLE)
+        return nullptr;
 
     for(ptrdiff_t iter = 0; iter < table->size; iter++)
     {
@@ -51,28 +56,28 @@ static generator_err vartable_resize_(Variable_table* table)
     return GENERATOR_NOERR;
 }
 
-generator_err vartable_add(Variable_table* table, Variable* var)
+generator_err vartable_add(Variable_table* table, Variable var)
 {
     assert(table);
-    assert(vartable_find(table, var->id) == nullptr);
+    assert(vartable_find(table, var.id) == nullptr);
 
     if(table->cap == table->size)
         vartable_resize_(table);
     
-    if(var->size == 0)
-        var->size = 1;
+    if(var.size == 0)
+        var.size = 1;
     
     if(table->size > 0)
     {
         Variable* prev = &table->array[table->size - 1];
-        var->offset = prev->offset + prev->size;
+        var.offset = prev->offset + prev->size;
     }
     else
     {
-        var->offset = 0;
+        var.offset = 0;
     }
 
-    table->array[table->size] = *var;
+    table->array[table->size] = var;
     table->size++;
 
     return GENERATOR_NOERR;

@@ -8,7 +8,7 @@ static Tree*        TREE_        = nullptr;
 static Token_array* TOKEN_ARRAY_ = nullptr;
 
 #define syntax_error(TOK) ASSERT$(0, Syntax error, return PARSER_SYNTAX_ERR; );
-#define SYNTAX(CONDITION) PASS$(CONDITION, return PARSER_SYNTAX_ERR; )
+#define PASS(CONDITION) PASS$(CONDITION, return PARSER_SYNTAX_ERR; )
 
 /*
     Grammar:
@@ -30,7 +30,7 @@ static Token_array* TOKEN_ARRAY_ = nullptr;
         Terminational   ::= 'return' Expression ';'
         Assign          ::= {'const'}? TYPE_ID {'[' Expression ']'}? '=' '{' Expression {',' Expression}* '}' ';' |
                                                                          Expression ';'
-        
+
         Statement  ::= Conditional |
                        Cycle  |
                        Terminational |
@@ -73,16 +73,31 @@ static parser_err primary(Node** base)
     LOG$("Entering");
 
     Token tok = {};
+
     CONSUME(&tok);
 
     if(tok.type == TYPE_OP && tok.val.op == TOK_NOT)
     {
         MK_NODE(base, &tok);
-        SYNTAX(!primary(&(*base)->right));
+        PASS(!primary(&(*base)->right));
+    }
+    else if(tok.type == TYPE_OP && tok.val.op == TOK_ADD)
+    {
+        PASS(!primary(base));        
+    }
+    else if(tok.type == TYPE_OP && tok.val.op == TOK_SUB)
+    {
+        MK_NODE(base, &tok);
+
+        tok.type = TYPE_NUMBER;
+        tok.val.num = 0;
+        MK_NODE(&(*base)->left, &tok);
+
+        PASS(!primary(&(*base)->right));
     }
     else if(tok.type == TYPE_OP && tok.val.op == TOK_LRPAR)
     {
-        SYNTAX(!expression(base));
+        PASS(!expression(base));
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -95,6 +110,7 @@ static parser_err primary(Node** base)
     else if(tok.type == TYPE_ID)
     {
         Token probe = {};
+
         PEEK(&probe, 0);
         
         if(probe.type == TYPE_OP && probe.val.op == TOK_LRPAR)
@@ -112,7 +128,7 @@ static parser_err primary(Node** base)
             if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
             {
                 MK_AUX(base, TOK_PARAMETER);
-                SYNTAX(!expression(&(*base)->right));
+                PASS(!expression(&(*base)->right));
 
                 PEEK(&tok, 0);
                 while(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
@@ -121,7 +137,7 @@ static parser_err primary(Node** base)
 
                     Node* tmp = *base;
                     MK_AUX(base, TOK_PARAMETER);
-                    SYNTAX(!expression(&(*base)->right));
+                    PASS(!expression(&(*base)->right));
                     (*base)->left = tmp;
 
                     PEEK(&tok, 0);
@@ -138,7 +154,7 @@ static parser_err primary(Node** base)
             MK_NODE(base, &tok);
 
             CONSUME(&tok);
-            SYNTAX(!primary(&(*base)->right));
+            PASS(!primary(&(*base)->right));
         }
         else
         {
@@ -154,7 +170,7 @@ static parser_err primary(Node** base)
         if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
             syntax_error(&tok);
         
-        SYNTAX(!expression(&(*base)->right));
+        PASS(!expression(&(*base)->right));
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -172,7 +188,7 @@ static parser_err term(Node** base)
 {
     LOG$("Entering");
 
-    SYNTAX(!primary(base));
+    PASS(!primary(base));
 
     Token tok = {};
     PEEK(&tok, 0);
@@ -186,7 +202,7 @@ static parser_err term(Node** base)
         MK_NODE(base, &tok);
         
         (*base)->left = tmp;
-        SYNTAX(!primary(&(*base)->right));
+        PASS(!primary(&(*base)->right));
         
         PEEK(&tok, 0);
     }
@@ -198,7 +214,7 @@ static parser_err ariphmetic(Node** base)
 {
     LOG$("Entering");
 
-    SYNTAX(!term(base));
+    PASS(!term(base));
 
     Token tok = {};
     PEEK(&tok, 0);
@@ -212,7 +228,7 @@ static parser_err ariphmetic(Node** base)
         MK_NODE(base, &tok);
 
         (*base)->left = tmp;
-        SYNTAX(!term(&(*base)->right));
+        PASS(!term(&(*base)->right));
 
         PEEK(&tok, 0);
     }
@@ -224,7 +240,7 @@ static parser_err boolean(Node** base)
 {
     LOG$("Entering");
 
-    SYNTAX(!ariphmetic(base));
+    PASS(!ariphmetic(base));
 
     Token tok = {};
     PEEK(&tok, 0);
@@ -240,7 +256,7 @@ static parser_err boolean(Node** base)
         MK_NODE(base, &tok);
 
         (*base)->left = tmp;
-        SYNTAX(!ariphmetic(&(*base)->right));
+        PASS(!ariphmetic(&(*base)->right));
 
         PEEK(&tok, 0);
     }
@@ -252,7 +268,7 @@ static parser_err expression(Node** base)
 {
     LOG$("Entering");
 
-    SYNTAX(!boolean(base));
+    PASS(!boolean(base));
 
     Token tok = {};
     PEEK(&tok, 0);
@@ -266,7 +282,7 @@ static parser_err expression(Node** base)
         MK_NODE(base, &tok);
 
         (*base)->left = tmp;
-        SYNTAX(!boolean(&(*base)->right));
+        PASS(!boolean(&(*base)->right));
 
         PEEK(&tok, 0);
     }
@@ -298,7 +314,7 @@ static parser_err assign(Node** base)
     CONSUME(&tok);
     if(tok.type == TYPE_OP && tok.val.op == TOK_LQPAR)
     {
-        SYNTAX(!expression(&(*base)->right));
+        PASS(!expression(&(*base)->right));
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP && tok.val.op != TOK_RQPAR)
@@ -314,7 +330,7 @@ static parser_err assign(Node** base)
     MK_NODE(base, &tok);
     (*base)->left = tmp;
 
-    SYNTAX(!expression(&(*base)->right));
+    PASS(!expression(&(*base)->right));
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
@@ -340,7 +356,7 @@ static parser_err conditional(Node** base)
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
         syntax_error(&tok);
 
-    SYNTAX(!expression(&(*base)->left));
+    PASS(!expression(&(*base)->left));
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -358,7 +374,7 @@ static parser_err conditional(Node** base)
     {
         Node* tmp = (*base)->left;
         MK_AUX(&(*base)->left, TOK_STATEMENT);
-        SYNTAX(!statement(&(*base)->left->right));
+        PASS(!statement(&(*base)->left->right));
         (*base)->left->left = tmp;
 
         PEEK(&tok, 0);
@@ -382,7 +398,7 @@ static parser_err conditional(Node** base)
     {
         Node* tmp = (*base)->right;
         MK_AUX(&(*base)->right, TOK_STATEMENT);
-        SYNTAX(!statement(&(*base)->right->right));
+        PASS(!statement(&(*base)->right->right));
         (*base)->right->left = tmp;
 
         PEEK(&tok, 0);
@@ -412,7 +428,7 @@ static parser_err cycle(Node** base)
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
         syntax_error(&tok);
     
-    SYNTAX(!expression(&(*base)->left));
+    PASS(!expression(&(*base)->left));
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -429,7 +445,7 @@ static parser_err cycle(Node** base)
     {
         Node* tmp = (*base);
         MK_AUX(base, TOK_STATEMENT);
-        SYNTAX(!statement(&(*base)->right));
+        PASS(!statement(&(*base)->right));
         (*base)->left = tmp;
 
         PEEK(&tok, 0);
@@ -456,7 +472,7 @@ static parser_err terminational(Node** base)
     
     MK_NODE(base, &tok);
 
-    SYNTAX(!expression(&(*base)->right));
+    PASS(!expression(&(*base)->right));
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
@@ -478,22 +494,22 @@ static parser_err statement(Node** base)
     {
         if(tok.val.key == TOK_IF)
         {
-            SYNTAX(!conditional(base));
+            PASS(!conditional(base));
             return PARSER_NOERR;
         }
         else if(tok.val.key == TOK_WHILE)
         {
-            SYNTAX(!cycle(base));
+            PASS(!cycle(base));
             return PARSER_NOERR;
         }
         else if(tok.val.key == TOK_RETURN)
         {
-            SYNTAX(!terminational(base));
+            PASS(!terminational(base));
             return PARSER_NOERR;
         }
         else if(tok.val.key == TOK_CONST)
         {
-            SYNTAX(!assign(base));
+            PASS(!assign(base));
             return PARSER_NOERR;
         }
     }
@@ -503,12 +519,12 @@ static parser_err statement(Node** base)
         PEEK(&tok, 1);
         if(tok.type == TYPE_OP && (tok.val.op == TOK_ASSIGN || tok.val.op == TOK_LQPAR))
         {
-            SYNTAX(!assign(base));
+            PASS(!assign(base));
             return PARSER_NOERR;
         }
     }
     
-    SYNTAX(!expression(base));
+    PASS(!expression(base));
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
         syntax_error(&tok);
@@ -542,7 +558,7 @@ static parser_err define(Node** base)
     {
         MK_AUX(&(*base)->left->right, TOK_PARAMETER);
 
-        SYNTAX(!expression(&(*base)->left->right->right));
+        PASS(!expression(&(*base)->left->right->right));
     }
 
     PEEK(&tok, 0);
@@ -555,7 +571,7 @@ static parser_err define(Node** base)
         if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
             syntax_error(&tok);
 
-        SYNTAX(!expression(&(*base)->left->right->right));
+        PASS(!expression(&(*base)->left->right->right));
         (*base)->left->right->left = tmp;
 
         PEEK(&tok, 0);
@@ -575,7 +591,7 @@ static parser_err define(Node** base)
         Node* tmp = (*base)->right;
         MK_AUX(&(*base)->right, TOK_STATEMENT);
 
-        SYNTAX(!statement(&(*base)->right->right));
+        PASS(!statement(&(*base)->right->right));
         (*base)->right->left = tmp;
 
         PEEK(&tok, 0);
@@ -606,7 +622,7 @@ static parser_err general(Node** base)
 
         if(tok.type == TYPE_KEYWORD && tok.val.key == TOK_CONST)
         {
-            SYNTAX(!assign(&(*base)->right));
+            PASS(!assign(&(*base)->right));
             PEEK(&tok, 0);
             continue;
         }
@@ -614,12 +630,12 @@ static parser_err general(Node** base)
         PEEK(&tok, 1);
         if(tok.type == TYPE_OP && tok.val.op == TOK_ASSIGN)
         {
-            SYNTAX(!assign(&(*base)->right));
+            PASS(!assign(&(*base)->right));
             PEEK(&tok, 0);
             continue;
         }
 
-        SYNTAX(!define(&(*base)->right));
+        PASS(!define(&(*base)->right));
         PEEK(&tok, 0);
     }
     

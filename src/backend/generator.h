@@ -10,6 +10,9 @@ enum generator_err
     GENERATOR_BAD_ALLOC = 2,
 };
 
+const ptrdiff_t MEMORY_GLOBAL = 0;
+const ptrdiff_t MEMORY_LOCAL  = 64;
+
 generator_err generator(Tree* tree, FILE* ostream);
 
 #endif // GENERATOR_H

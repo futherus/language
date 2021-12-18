@@ -33,10 +33,11 @@ struct Variable_table
     Variable* array = nullptr;
 };
 
+extern const char CALL_VARIABLE[];
+
 ptrdiff_t     vartable_end(Variable_table* table);
 Variable*     vartable_find(Variable_table* table, const char* id);
-generator_err vartable_add(Variable_table* table, Variable* var);
-
+generator_err vartable_add(Variable_table* table, Variable var);
 
 void          vartable_dstr(Variable_table* table);
 

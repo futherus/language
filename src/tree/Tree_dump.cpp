@@ -9,13 +9,13 @@
 
 #include "Tree.h"
 
-static const char TREE_DUMPFILE[] = "tree_dump.html";
+static const char TREE_DUMPFILE_DIR[] = "logs";
+static const char TREE_DUMPFILE[] = "logs/tree_dump.html";
 
 #define PRINT(format, ...) fprintf(stream, format, ##__VA_ARGS__)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-static long DUMP_ITERATION = 0;
 static FILE* TEMP_GRAPH_STREAM = nullptr;
 
 static const char GRAPHVIZ_PNG_NAME[]  = "tree_dump/graphviz_dump";
@@ -38,7 +38,18 @@ static const char GRAPHVIZ_OUTRO[] = "}\n";
 static char* graphviz_png_()
 {
     static char filename[FILENAME_MAX] = "";
-    sprintf(filename, "%s_%ld.png", GRAPHVIZ_PNG_NAME, DUMP_ITERATION);
+
+    FILE* probe = nullptr;
+    long iter = 0;
+    do
+    {
+        iter++;
+        sprintf(filename, "%s_%ld.png", GRAPHVIZ_PNG_NAME, iter);
+        probe = fopen(filename, "r");
+    }
+    while(probe != nullptr);
+
+    fclose(probe);
 
     return filename;
 }
@@ -91,9 +102,12 @@ static void tree_print_node_(Node* node, size_t)
     if(node->right != nullptr)
         PRINT("node%p -> node%p [color = orange];\n", node, node->right);
 }
-static void tree_graph_dump_(Tree* tree)
+static void tree_graph_dump_(Tree* tree, const char* graphviz_png_name)
 {
-    FILE* stream = fopen(GRAPHVIZ_TEMP_FILE, "w");
+    char temp[FILENAME_MAX] = "";
+    sprintf(temp, "%s/%s", TREE_DUMPFILE_DIR, GRAPHVIZ_TEMP_FILE);
+
+    FILE* stream = fopen(temp, "w");
     if(!stream)
     {
         perror(__FILE__": can't open temporary dump file");
@@ -109,8 +123,9 @@ static void tree_graph_dump_(Tree* tree)
 
     fclose(stream);
 
-    char sys_cmd[FILENAME_MAX] = "dot tree_dump/graphviz_temp.txt -q -Tpng -o ";
-    strcat(sys_cmd, graphviz_png_());
+    char sys_cmd[FILENAME_MAX] = "";
+    sprintf(sys_cmd, "dot %s/%s -q -Tpng -o %s/%s",
+            TREE_DUMPFILE_DIR, GRAPHVIZ_TEMP_FILE, TREE_DUMPFILE_DIR, graphviz_png_name);
 
     system(sys_cmd);
 }
@@ -162,7 +177,7 @@ static const char ERROR_MSG[]        = "\n                                      
 
 void tree_dump(Tree* tree, const char msg[], tree_err errcode)
 {
-    DUMP_ITERATION++;
+    const char* graphviz_png_name = graphviz_png_();
 
     FILE* stream = DUMP_STREAM;
     if(stream == nullptr)
@@ -196,9 +211,9 @@ void tree_dump(Tree* tree, const char msg[], tree_err errcode)
         return;
     }
     PRINT("\n\n\n");
-    tree_graph_dump_(tree);
+    tree_graph_dump_(tree, graphviz_png_name);
 
-    PRINT(R"(<img src = ")" "%s" R"(" alt = "Graphical dump" height = 1080>)", graphviz_png_());
+    PRINT(R"(<img src = ")" "%s" R"(" alt = "Graphical dump" height = 1080>)", graphviz_png_name);
 
     PRINT("<span class = \"title\">\n\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n</span>");
 }
@@ -226,7 +241,6 @@ void tree_dump_init(FILE* dumpstream)
     if(TREE_DUMPFILE[0] != 0)
     {
         DUMP_STREAM = fopen(TREE_DUMPFILE, "w");
-
 
         if(DUMP_STREAM)
         {
