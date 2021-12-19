@@ -77,21 +77,13 @@ static void tree_print_node_(Node* node, size_t)
         case TYPE_KEYWORD: case TYPE_AUX :
             PRINT("shape = parallelogram, color = black]");
             break;
-            
-        case TYPE_VAR:
-            PRINT("shape = box, color = blue]");
-            break;
-        
+                    
         case TYPE_NUMBER:
             PRINT("shape = oval, color = yellow]");
             break;
 
-        case TYPE_FUNC:
-            PRINT("shape = octagon, color = blue]");
-            break;
-
         case TYPE_ID:
-            PRINT("shape = doubleoctagon, color = red, penwidth = 10]");
+            PRINT("shape = octagon, color = blue]");
             break;
 
         default: case TYPE_NOTYPE : case TYPE_EOF : 

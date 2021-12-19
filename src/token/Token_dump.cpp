@@ -110,14 +110,6 @@ void token_array_dump(Token_array* tok_arr)
                 PRINT("<td>  %s  </td>\n<td>  [%p]  </td>\n<td>  TYPE_ID  </td>\n", tok_arr->data[iter].val.name, tok_arr->data[iter].val.name);
                 break;
             
-            case TYPE_VAR:
-                PRINT("<td>  %s  </td>\n<td>  [%p]  </td>\n<td>  TYPE_VAR  </td>\n", tok_arr->data[iter].val.name, tok_arr->data[iter].val.name);
-                break;
-            
-            case TYPE_FUNC:
-                PRINT("<td>  %s  </td>\n<td>  [%p]  </td>\n<td>  TYPE_FUNC  </td>\n", tok_arr->data[iter].val.name, tok_arr->data[iter].val.name);
-                break;
-            
             case TYPE_NUMBER:
                 PRINT("<td>  %lg  </td>\n<td>  --//--  </td>\n<td>  TYPE_NUMBER  </td>\n", tok_arr->data[iter].val.num);
                 break;

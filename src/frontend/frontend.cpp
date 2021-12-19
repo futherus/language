@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <windows.h>
 
 #include "parser/parser.h"
 #include "lexer/lexer.h"
@@ -27,6 +28,9 @@ int main(int argc, char* argv[])
     tree_dump_init(dumpsystem_get_stream(frontend_log));
     token_dump_init(dumpsystem_get_stream(frontend_log));
 
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+
     char  infile_name[FILENAME_MAX]  = "";
     char  outfile_name[FILENAME_MAX] = "";
     char* data = nullptr;
@@ -49,23 +53,23 @@ int main(int argc, char* argv[])
     }
 
 TRY__
-    CHECK__(get_file_sz_(infile_name, &file_sz) == -1,
-                                               FRONTEND_INFILE_FAIL);
+    ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
+                                                FRONTEND_INFILE_FAIL,  FAIL__);
 
     data = (char*) calloc(file_sz, sizeof(char));
-    CHECK__(!data,                             FRONTEND_BAD_ALLOC);
+    ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
     istream = fopen(infile_name, "r");
-    CHECK__(!istream,                          FRONTEND_INFILE_FAIL);
+    ASSERT$(istream,                            FRONTEND_INFILE_FAIL,  FAIL__);
 
     file_sz = fread(data, sizeof(char), file_sz, istream);
-    CHECK__(ferror(istream),                   FRONTEND_READ_FAIL);
+    ASSERT$(!ferror(istream),                   FRONTEND_READ_FAIL,    FAIL__);
 
     fclose(istream);
     istream = nullptr;
 
     data = (char*) realloc(data, file_sz * sizeof(char));
-    CHECK__(!data,                             FRONTEND_BAD_ALLOC);
+    ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
     lexer_error = lexer(&tok_arr, &tok_table, data, file_sz);
 
@@ -75,20 +79,22 @@ TRY__
     token_nametable_dump(&tok_table);
     token_array_dump(&tok_arr);
 
-    CHECK__(lexer_error,                       FRONTEND_LEXER_FAIL);
+    ASSERT$(!lexer_error,                       FRONTEND_LEXER_FAIL,   FAIL__);
 
-    CHECK__(parse(&tree, &tok_arr),            FRONTEND_PARSER_FAIL);
+    ASSERT$(!parse(&tree, &tok_arr),            FRONTEND_PARSER_FAIL,  FAIL__);
 
     ostream = fopen(outfile_name, "w");
-    CHECK__(!ostream,                          FRONTEND_OUTFILE_FAIL);
+    ASSERT$(ostream,                            FRONTEND_OUTFILE_FAIL, FAIL__);
 
     tree_write(&tree, ostream);
-    CHECK__(ferror(ostream),                   FRONTEND_WRITE_FAIL);
+    ASSERT$(!ferror(ostream),                   FRONTEND_WRITE_FAIL,   FAIL__);
 
     fclose(ostream);
     ostream = nullptr;
 
 CATCH__
+    ERROR__ = 1;
+
     if(istream)
         fclose(istream);
 

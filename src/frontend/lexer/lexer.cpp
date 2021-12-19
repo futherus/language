@@ -29,9 +29,30 @@ static void wordlen_(const char data[], int* n_read)
 {
     assert(data && n_read);
 
-    while(isalnum(data[*n_read]) || data[*n_read] == '_')
+    while((!ispunct(data[*n_read]) || data[*n_read] == '_') && !isspace(data[*n_read]))
         (*n_read)++;
 }
+
+#define lexer_err(MSG_, PTR_)                                                           \
+do                                                                                      \
+{                                                                                       \
+    char tmp_buffer_[128] = "";                                                         \
+    strncpy(tmp_buffer_, (PTR_), 126);                                                  \
+    tmp_buffer_[127] = '\0';                                                            \
+                                                                                        \
+    fprintf(stderr, "\x1b[31mLexer error:\x1b[0m %s : %s\n", (MSG_), tmp_buffer_);      \
+    FILE* stream_ = dumpsystem_get_opened_stream();                                     \
+                                                                                        \
+    if(stream_)                                                                         \
+    {                                                                                   \
+        fprintf(stream_, "<span class = \"error\">Lexer error: %s : %s\n</span>"        \
+                         "\t\t\t\tat %s:%d:%s\n",                                       \
+                         (MSG_), tmp_buffer_,                                           \
+                         __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
+                                                                                        \
+        return LEXER_LEXICAL_ERROR;                                                     \
+    }                                                                                   \
+} while(0)                                                                              \
 
 #define DEF_KEY(NAME, STD_NAME, MANGLE)                         \
     if(n_read == 0 || n_read == sizeof(NAME) - 1)               \
@@ -103,9 +124,14 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
         #include "../../reserved_keywords.inc"
         #include "../../reserved_embedded.inc"
 
-        ASSERT_RET$(n_read, LEXER_LEXICAL_ERROR);
+        if(!n_read)
+            lexer_err("Unknown symbol", data + pos);
 
-        PASS$(!token_nametable_add(tok_table, &tmp.val.name, data + pos, n_read), return LEXER_BAD_ALLOC; );
+        if(strncmp("пачатак", data + pos, n_read) == 0)
+            PASS$(!token_nametable_add(tok_table, &tmp.val.name, "main", sizeof("main") - 1), return LEXER_BAD_ALLOC; );
+        else
+            PASS$(!token_nametable_add(tok_table, &tmp.val.name, data + pos, n_read), return LEXER_BAD_ALLOC; );
+
         tmp.type = TYPE_ID;
 
         PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; );

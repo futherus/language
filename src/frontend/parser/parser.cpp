@@ -7,6 +7,19 @@
 static Tree*        TREE_        = nullptr;
 static Token_array* TOKEN_ARRAY_ = nullptr;
 
+static void syntax_error_tokens()
+{
+        Token error_token = {};
+
+        for(int iter = -2; iter < 3; iter++)
+        {
+            peek(&error_token, iter, TOKEN_ARRAY_); 
+            fprintf(stderr, "%s ", demangle(&error_token));
+        }
+
+        fprintf(stderr, "\n");
+}
+
 #define syntax_error(MSG_, TOK_)                                                        \
 do                                                                                      \
 {                                                                                       \
@@ -20,38 +33,44 @@ do                                                                              
                          (MSG_), demangle(TOK_),                                        \
                          __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
                                                                                         \
+        syntax_error_tokens();                                                          \
         return PARSER_SYNTAX_ERR;                                                       \
     }                                                                                   \
 } while(0)                                                                              \
 
 /*
     New Grammar:
-        Primary    ::= 'не' Primary |
-                       '(' Expression ')' |
-                       TYPE_NUMBER |
-                       TYPE_ID |                                                  //Variable                   //1)TYPE_ID->TYPE_VAR
-                       'зрушаны на' Primary TYPE_ID |                             //Array access               //1)TYPE_ID->TYPE_VAR
-                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call              //1)TYPE_ID->TYPE_FUNC
+        Primary    ::= 'дадаць' Primary       |
+                       'за_недахопам' Primary |
+                       'не' Primary           |
+                       '(' Expression ')'     |
+                       TYPE_NUMBER            |
+                       TYPE_ID                |                                   //Variable
+                       TYPE_ID 'зрушаны_на' Primary                    |          //Array access
+                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call
                        TYPE_EMB  '(' Expression ')'                               //Embedded-function call
 
-        Term       ::= Primary {['падзелены на' 'памножаны на'] Primary}*
-        Ariphmetic ::= Term {['скласцi з' 'за недахопам'] Term}*
-        Boolean    ::= Ariphmetic {['аднолькавы з' 'драбнейшы за' 'больш чым' 'драбнейшы ці аднолькавы з' 'большы ці аднолькавы з', 'розьніцца з'] Ariphmetic}*
+        Term       ::= Primary {['падзелены_на' 'памножаны_на'] Primary}*
+        Ariphmetic ::= Term {['дадаць' 'за_недахопам'] Term}*
+        Boolean    ::= Ariphmetic {['аднолькавы_з' 'драбнейшы_за' 'больш_чым' 'драбнейшы_ці_аднолькавы_з' 'большы_ці_аднолькавы_з', 'розьніцца_з'] Ariphmetic}*
         Expression ::= Boolean {['ці' 'і'] Boolean}*
 
         Conditional     ::= 'калі'    '(' Expression ')' '\\\\' {Statement}+ '////' {'інакш' '\\\\' {Statement}+ '////'}?
         Cycle           ::= 'пакуль' '(' Expression ')' '\\\\' {Statement}+ '////'
-        Terminational   ::= 'вышпурнуць' Expression ', нарэшце'
-        Assign          ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца'                                 '{' Expression {',' Expression}* '}' ',' 'нарэшце' |
-                                                                                      Expression ',' 'нарэшце'
+        Terminational   ::= 'вышпурнуць' Expression  'нарэшце'
+        Show            ::= 'надрукаваць' 'нарэшце'
+        Pixel           ::= 'пафарбаваць' '(' Expression ',' Expression ')' 'нарэшце'
+        Assign          ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца'                                 '{' Expression {',' Expression}* '}' 'нарэшце' |
+                                                                                      Expression 'нарэшце'
 
-        Statement  ::= Conditional |
-                       Cycle  |
+        Statement  ::= Conditional   |
+                       Cycle         |
                        Terminational |
-                       Assign |
-                       Expression ',' 'нарэшце'
+                       Assign        |
+                       Show          |
+                       Expression 'нарэшце'
 
-        Define     ::= TYPE_ID '(' {{'непахісны'}? TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'  //1)TYPE_ID->TYPE_FUNC, 2+)TYPE_ID->TYPE_VAR
+        Define     ::= TYPE_ID '(' {{'непахісны'}? TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'
 
         General    ::= {Define | Assign}+
 */
@@ -61,9 +80,9 @@ do                                                                              
         Primary    ::= '!' Primary |
                        '(' Expression ')' |
                        TYPE_NUMBER |
-                       TYPE_ID |                                                  //Variable                   //1)TYPE_ID->TYPE_VAR
-                       TYPE_ID '>>' Primary |                                     //Array access               //1)TYPE_ID->TYPE_VAR
-                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call              //1)TYPE_ID->TYPE_FUNC
+                       TYPE_ID |                                                  //Variable     
+                       TYPE_ID '>>' Primary |                                     //Array access 
+                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call
                        TYPE_EMB  '(' Expression ')'                               //Embedded-function call
 
         Term       ::= Primary {['/' '*'] Primary}*
@@ -83,7 +102,7 @@ do                                                                              
                        Assign |
                        Expression ';'
 
-        Define     ::= TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'  //1)TYPE_ID->TYPE_FUNC, 2+)TYPE_ID->TYPE_VAR
+        Define     ::= TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'
 
         General    ::= {Define | Assign}+
 */
@@ -94,6 +113,7 @@ static parser_err expression(Node** base);
 static parser_err conditional(Node** base);
 static parser_err cycle(Node** base);
 static parser_err terminational(Node** base);
+static parser_err show(Node** base);
 static parser_err assign(Node** base);
 static parser_err statement(Node** base);
 static parser_err general(Node** base);
@@ -126,6 +146,10 @@ static parser_err primary(Node** base)
     {
         MK_NODE(base, &tok);
         PASS$(!primary(&(*base)->right), return PARSER_PASS_ERR; );
+    }
+    else if(tok.type == TYPE_EMBED && tok.val.emb == TOK_SCAN)
+    {
+        MK_NODE(base, &tok);
     }
     else if(tok.type == TYPE_OP && tok.val.op == TOK_ADD)
     {
@@ -163,7 +187,6 @@ static parser_err primary(Node** base)
         {
             MK_AUX(base, TOK_CALL);
 
-            tok.type = TYPE_FUNC;
             MK_NODE(&(*base)->left, &tok);
             
             base = &(*base)->right;
@@ -196,7 +219,6 @@ static parser_err primary(Node** base)
         }
         else if(probe.type == TYPE_OP && probe.val.op == TOK_SHIFT)
         {
-            tok.type = TYPE_VAR;
             MK_NODE(base, &tok);
 
             CONSUME(&tok);
@@ -204,7 +226,6 @@ static parser_err primary(Node** base)
         }
         else
         {
-            tok.type = TYPE_VAR;
             MK_NODE(base, &tok);
         }
     }
@@ -353,7 +374,6 @@ static parser_err assign(Node** base)
         syntax_error(" ",&tok);
     
     Node* tmp = *base;
-    tok.type = TYPE_VAR;
     MK_NODE(base, &tok);
     (*base)->left = tmp;
 
@@ -527,6 +547,64 @@ static parser_err terminational(Node** base)
     return PARSER_NOERR;
 }
 
+static parser_err show(Node** base)
+{
+    LOG$("Entering");
+    
+    assert(base);
+
+    Token tok = {};
+    CONSUME(&tok);
+
+    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_SHOW)
+        syntax_error(" ", &tok);
+    
+    MK_NODE(base, &tok);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
+        syntax_error(" ", &tok);
+    
+    return PARSER_NOERR;
+}
+
+static parser_err pixel(Node** base)
+{
+    LOG$("Entering");
+
+    assert(base);
+
+    Token tok = {};
+    CONSUME(&tok);
+
+    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_PIXEL)
+        syntax_error(" ", &tok);
+    
+    MK_NODE(base, &tok);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
+        syntax_error(" ", &tok);
+    
+    expression(&(*base)->left);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
+        syntax_error(" ", &tok);
+    
+    expression(&(*base)->right);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
+        syntax_error(" ", &tok);
+    
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
+        syntax_error(" ", &tok);
+
+    return PARSER_NOERR;
+}
+
 static parser_err statement(Node** base)
 {
     LOG$("Entering");
@@ -556,6 +634,16 @@ static parser_err statement(Node** base)
         else if(tok.val.key == TOK_CONST)
         {
             PASS$(!assign(base), return PARSER_PASS_ERR; );
+            return PARSER_NOERR;
+        }
+        else if(tok.val.key == TOK_SHOW)
+        {
+            PASS$(!show(base), return PARSER_PASS_ERR; );
+            return PARSER_NOERR;
+        }
+        else if(tok.val.key == TOK_PIXEL)
+        {
+            PASS$(!pixel(base), return PARSER_PASS_ERR; );
             return PARSER_NOERR;
         }
     }
@@ -592,7 +680,6 @@ static parser_err define(Node** base)
     if(tok.type != TYPE_ID)
         syntax_error(" ",&tok);
     
-    tok.type = TYPE_FUNC;
     MK_NODE(&(*base)->left->left, &tok);
     
     CONSUME(&tok);

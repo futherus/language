@@ -31,7 +31,7 @@ static void tree_print_node_(Node* node, FILE* stream)
     if(node->left)
         tree_print_node_(node->left, stream);
 
-    if(node->tok.type == TYPE_FUNC || node->tok.type == TYPE_VAR)
+    if(node->tok.type == TYPE_ID)
         PRINT("\'%s\'", demangle(&node->tok));
     else if(node->tok.type == TYPE_AUX && (node->tok.val.aux == TOK_STATEMENT || node->tok.val.aux == TOK_DECISION))
         PRINT("\n%*s%s", depth * 4, "", demangle(&node->tok));

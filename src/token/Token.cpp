@@ -159,7 +159,7 @@ char* demangle(const Token* tok)
             sprintf(buffer, "%lg", tok->val.num);
             break;
 
-        case TYPE_VAR : case TYPE_FUNC : case TYPE_ID :
+        case TYPE_ID :
             sprintf(buffer, "%s", tok->val.name);
             break;
 
@@ -211,7 +211,12 @@ char* demangle(const Token* tok)
             
             break;
         }
-        default: case TYPE_NOTYPE : case TYPE_EOF :
+        case TYPE_EOF:
+        {
+            sprintf(buffer, "EOF");
+            break;
+        }
+        default: case TYPE_NOTYPE :
             assert(0 && tok->type);
     }
 

@@ -5,6 +5,7 @@
 #include "generator.h"
 #include "nametable/nametable.h"
 #include "../dumpsystem/dumpsystem.h"
+#include "hash.h"
 
 /*
     rax -- return value
@@ -89,11 +90,11 @@ static generator_err variable(Node* node)
         semantic_error("Variable has 'const' specifier in expression", &node->tok);
     
     if(node->right)
-    {        
         PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+    else
+        print_tab("push 0\n");
 
-        print_tab("pop rex\n");
-    }
+    print_tab("pop rex\n");
 
     Variable* var = 0;
     
@@ -118,21 +119,36 @@ static generator_err embedded(Node* node)
     assert(node);
     assert(node->tok.type == TYPE_EMBED);
 
-    if(!node->right)
-        format_error("Embedded function requires argument", &node->tok);
 
-    switch(node->tok.val.aux)
+    switch(node->tok.val.emb)
     {
         case TOK_SIN:
         {
+            if(!node->right)
+                format_error("Embedded function requires argument", &node->tok);
+
             PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
             print_tab("pop rex\n");
             print_tab("sin rex\n");
             break;
         }
+        case TOK_COS:
+        {
+            if(!node->right)
+                format_error("Embedded function requires argument", &node->tok);
+
+            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+
+            print_tab("pop rex\n");
+            print_tab("cos rex\n");
+            break;
+        }
         case TOK_PRINT:
         {
+            if(!node->right)
+                format_error("Embedded function requires argument", &node->tok);
+
             PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
             print_tab("out\n");
@@ -141,33 +157,8 @@ static generator_err embedded(Node* node)
             break;
         }
         case TOK_SCAN:
-        {
-            if(node->right->tok.type != TYPE_ID)
-                format_error("Scan requires variable as argument", &node->right->tok);
-            
+        {            
             print_tab("in\n");
-
-            Variable* var = {};
-            if((var = vartable_find(LOCALS, node->right->tok.val.name)) != nullptr)
-            {
-                if(var->is_const)
-                    semantic_error("Cannot scan to 'const' variable", &node->right->tok);
-
-                print_tab("pop [rbx + %lld]\n", var->offset);
-            }
-            else if((var = vartable_find(GLOBALS, node->right->tok.val.name)) != nullptr)
-            {
-                if(var->is_const)
-                    semantic_error("Cannot scan to 'const' variable", &node->right->tok);
-
-                print_tab("pop [rcx + %lld]\n", var->offset);
-            }
-            else
-            {
-                semantic_error("Variable wasn't declared", &node->right->tok);
-            }
-
-            print_tab("push 0\n");
 
             break;
         }
@@ -180,34 +171,32 @@ static generator_err embedded(Node* node)
     return GENERATOR_NOERR;
 }
 
-#define PRINT_CMD(MANGLE, TXT)     \
-    case TOK_##MANGLE:             \
-        print_tab("%s\n", (TXT));  \
-        break;                     \
+#define PRINT_CMD(MANGLE, TXT)              \
+    if(node->tok.val.op == TOK_##MANGLE)    \
+    {                                       \
+        print_tab("%s\n", (TXT));           \
+    }                                       \
+    else                                    \
     
 static generator_err oper(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_OP);
 
-    switch(node->tok.val.op)
-    {
-        PRINT_CMD(ADD,   "add");
-        PRINT_CMD(SUB,   "sub");
-        PRINT_CMD(MUL,   "mul");
-        PRINT_CMD(DIV,   "div");
-        PRINT_CMD(EQ,    "eq");
-        PRINT_CMD(NEQ,   "neq");
-        PRINT_CMD(GREAT, "gr");
-        PRINT_CMD(LESS,  "le");
-        PRINT_CMD(LEQ,   "leq");
-        PRINT_CMD(GEQ,   "geq");
-        PRINT_CMD(AND,   "and");
-        PRINT_CMD(OR,    "or");
-        
-        default:
-            format_error("Unknown operator", &node->tok);
-    }
+    PRINT_CMD(ADD,   "add")
+    PRINT_CMD(SUB,   "sub")
+    PRINT_CMD(MUL,   "mul")
+    PRINT_CMD(DIV,   "div")
+    PRINT_CMD(EQ,    "eq")
+    PRINT_CMD(NEQ,   "neq")
+    PRINT_CMD(GREAT, "gr")
+    PRINT_CMD(LESS,  "le")
+    PRINT_CMD(LEQ,   "leq")
+    PRINT_CMD(GEQ,   "geq")
+    PRINT_CMD(AND,   "and")
+    PRINT_CMD(OR,    "or")
+    /* else */
+        format_error("Unknown operator", &node->tok);
 
     return GENERATOR_NOERR;
 }
@@ -273,7 +262,8 @@ static generator_err call(Node* node)
     print_tab("add\n");
     print_tab("pop rbx\n");
 
-    print_tab("call %s\n", node->left->tok.val.name);
+    char* func_name = node->left->tok.val.name;
+    print_tab("call func__%llx\n", fnv1_64(func_name, strlen(func_name)));
 
     print_tab("push rbx\n");
     print_tab("push %lld\n", call_offset);
@@ -410,6 +400,40 @@ static generator_err terminational(Node* node)
     return GENERATOR_NOERR;
 }
 
+static generator_err show(Node* node)
+{
+    assert(node);
+    assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_SHOW);
+
+    if(node->left || node->right)
+        format_error("Show statement cannot has descendants", &node->tok);
+    
+    print_tab("dspl\n");
+
+    return GENERATOR_NOERR;
+}
+
+static generator_err pixel(Node* node)
+{
+    assert(node);
+    assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_PIXEL);
+
+    if(!node->left || !node->right)
+        format_error("Pixel statement missing descendants", &node->tok);
+    
+    print("\n");
+
+    expression(node->left);
+    expression(node->right);
+
+    print_tab("pop rfx\n");
+    print_tab("pop rex\n");
+
+    print_tab("pix rex, rfx, 1\n\n");
+
+    return GENERATOR_NOERR;
+}
+
 static generator_err assignment(Node* node, Variable_table* vartable)
 {
     assert(node && vartable);
@@ -480,19 +504,31 @@ static generator_err assignment(Node* node, Variable_table* vartable)
     
     if(ptr->is_const)
         semantic_error("Assignment to 'const' variable", &node->left->tok);
-            
+        
     if(node->left->right)
-        PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
-
-    print_tab("pop rex\n");
-
-    if(is_global)
     {
-        print_tab("pop [rcx + %lld + rex]\n", ptr->offset);
+        PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
+        print_tab("pop rex\n");
+
+        if(is_global)
+        {
+            print_tab("pop [rcx + %lld + rex]\n", ptr->offset);
+        }
+        else
+        {
+            print_tab("pop [rbx + %lld + rex]\n", ptr->offset);
+        }
     }
     else
     {
-        print_tab("pop [rbx + %lld + rex]\n", ptr->offset);
+        if(is_global)
+        {
+            print_tab("pop [rcx + %lld]\n", ptr->offset);
+        }
+        else
+        {
+            print_tab("pop [rbx + %lld]\n", ptr->offset);
+        }
     }
 
     return GENERATOR_NOERR;
@@ -515,16 +551,24 @@ static generator_err statement(Node* node)
             PASS$(!conditional(node->right), return GENERATOR_PASS_ERROR; );
             return GENERATOR_NOERR;
         }
-        
-        if(node->right->tok.val.key == TOK_WHILE)
+        else if(node->right->tok.val.key == TOK_WHILE)
         {
             PASS$(!cycle(node->right), return GENERATOR_PASS_ERROR; );
             return GENERATOR_NOERR;
         }
-
-        if(node->right->tok.val.key == TOK_RETURN)
+        else if(node->right->tok.val.key == TOK_RETURN)
         {
             PASS$(!terminational(node->right), return GENERATOR_PASS_ERROR; );
+            return GENERATOR_NOERR;
+        }
+        else if(node->right->tok.val.key == TOK_SHOW)
+        {
+            PASS$(!show(node->right), return GENERATOR_PASS_ERROR; );
+            return GENERATOR_NOERR;
+        }
+        else if(node->right->tok.val.key == TOK_PIXEL)
+        {
+            PASS$(!pixel(node->right), return GENERATOR_PASS_ERROR; );
             return GENERATOR_NOERR;
         }
     }
@@ -668,7 +712,8 @@ static generator_err generate_funcs(Node* node)
     if(node->right->tok.type != TYPE_AUX || node->right->tok.val.aux != TOK_DEFINE)
         return GENERATOR_NOERR;
     
-    print("\n\n\n%s:\n", node->right->left->left->tok.val.name);
+    char* func_name = node->right->left->left->tok.val.name;
+    print("\n\n\nfunc__%llx:\n", fnv1_64(func_name, strlen(func_name)));
 
     INDENTATION++;
 
@@ -721,7 +766,7 @@ generator_err generator(Tree* tree, FILE* ostream)
     PASS$(!generate_globals(tree->root), return GENERATOR_PASS_ERROR; );
     vartable_dump(&globals);
 
-    print_tab("call main\n");
+    print_tab("call func__%llx\n", fnv1_64("main", sizeof("main") - 1));
 
     print_tab("hlt\n");
 
