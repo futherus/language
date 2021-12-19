@@ -113,7 +113,6 @@ static parser_err expression(Node** base);
 static parser_err conditional(Node** base);
 static parser_err cycle(Node** base);
 static parser_err terminational(Node** base);
-static parser_err show(Node** base);
 static parser_err assign(Node** base);
 static parser_err statement(Node** base);
 static parser_err general(Node** base);
@@ -147,10 +146,6 @@ static parser_err primary(Node** base)
         MK_NODE(base, &tok);
         PASS$(!primary(&(*base)->right), return PARSER_PASS_ERR; );
     }
-    else if(tok.type == TYPE_EMBED && tok.val.emb == TOK_SCAN)
-    {
-        MK_NODE(base, &tok);
-    }
     else if(tok.type == TYPE_OP && tok.val.op == TOK_ADD)
     {
         PASS$(!primary(base), return PARSER_PASS_ERR; );        
@@ -171,7 +166,7 @@ static parser_err primary(Node** base)
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-            syntax_error(" ",&tok);
+            syntax_error("Closing parenthesis expected (primary expression)",&tok);
     }
     else if(tok.type == TYPE_NUMBER)
     {
@@ -215,7 +210,7 @@ static parser_err primary(Node** base)
 
             CONSUME(&tok);
             if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-                syntax_error(" ",&tok);
+                syntax_error("Closing parenthesis expected (function call)",&tok);
         }
         else if(probe.type == TYPE_OP && probe.val.op == TOK_SHIFT)
         {
@@ -235,17 +230,27 @@ static parser_err primary(Node** base)
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-            syntax_error(" ",&tok);
+            syntax_error("Opening parenthesis expected (embedded)",&tok);
         
-        PASS$(!expression(&(*base)->right), return PARSER_PASS_ERR; );
+        PEEK(&tok, 0);
+        if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
+            PASS$(!expression(&(*base)->right), return PARSER_PASS_ERR; );
+                
+        PEEK(&tok, 0);
+        if(tok.type == TYPE_OP && tok.val.op == TOK_COMMA)
+        {
+            CONSUME(&tok);
+            (*base)->left = (*base)->right;
+            PASS$(!expression(&(*base)->right), return PARSER_PASS_ERR; );
+        }
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-            syntax_error(" ",&tok);
+            syntax_error("Closing parenthesis expected (embedded)",&tok);
     }
     else
     {
-        syntax_error(" ",&tok);
+        syntax_error("Primary expression expected", &tok);
     }
 
     return PARSER_NOERR;
@@ -371,7 +376,7 @@ static parser_err assign(Node** base)
     }
 
     if(tok.type != TYPE_ID)
-        syntax_error(" ",&tok);
+        syntax_error("Assignment requires lvalue",&tok);
     
     Node* tmp = *base;
     MK_NODE(base, &tok);
@@ -384,13 +389,13 @@ static parser_err assign(Node** base)
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP && tok.val.op != TOK_RQPAR)
-            syntax_error(" ",&tok);
+            syntax_error("Closing parenthesis expected (array access)",&tok);
         
         CONSUME(&tok);
     }
 
     if(tok.type != TYPE_OP || tok.val.op != TOK_ASSIGN)
-        syntax_error(" ",&tok);
+        syntax_error("'=' operator expected",&tok);
     
     tmp = *base;
     MK_NODE(base, &tok);
@@ -400,7 +405,7 @@ static parser_err assign(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error(" ",&tok);
+        syntax_error("Terminational literal expected",&tok);
     
     return PARSER_NOERR;
 }
@@ -413,27 +418,26 @@ static parser_err conditional(Node** base)
 
     Token tok = {};
     CONSUME(&tok);
-    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_IF)
-        syntax_error(" ",&tok);
+    assert(tok.type == TYPE_KEYWORD && tok.val.key == TOK_IF);
     
     MK_NODE(base, &tok);
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (condition)",&tok);
 
     PASS$(!expression(&(*base)->left), return PARSER_PASS_ERR; );
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (condition)",&tok);
     
     MK_AUX(&(*base)->right, TOK_DECISION);
     base = &(*base)->right;
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (body of positive)",&tok);
     
     PEEK(&tok, 0);
     while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
@@ -448,7 +452,7 @@ static parser_err conditional(Node** base)
     
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (body of positive)",&tok);
     
     PEEK(&tok, 0);
     if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_ELSE)
@@ -457,7 +461,7 @@ static parser_err conditional(Node** base)
     CONSUME(&tok);
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (body of negative)",&tok);
     
     PEEK(&tok, 0);
     while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
@@ -472,7 +476,7 @@ static parser_err conditional(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (body of negative)",&tok);
     
     return PARSER_NOERR;
 }
@@ -485,24 +489,23 @@ static parser_err cycle(Node** base)
 
     Token tok = {};
     CONSUME(&tok);
-    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_WHILE)
-        syntax_error(" ",&tok);
+    assert(tok.type == TYPE_KEYWORD && tok.val.key == TOK_WHILE);
 
     MK_NODE(base, &tok);
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (condition of loop)",&tok);
     
     PASS$(!expression(&(*base)->left), return PARSER_PASS_ERR; );
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (condition of loop)",&tok);
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (body of loop)",&tok);
         
     base = &(*base)->right;
 
@@ -519,7 +522,7 @@ static parser_err cycle(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (body of loop)",&tok);
 
     return PARSER_NOERR;
 }
@@ -533,8 +536,7 @@ static parser_err terminational(Node** base)
     Token tok = {};
     CONSUME(&tok);
 
-    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_RETURN)
-        syntax_error(" ",&tok);
+    assert(tok.type == TYPE_KEYWORD && tok.val.key == TOK_RETURN);
     
     MK_NODE(base, &tok);
 
@@ -542,65 +544,7 @@ static parser_err terminational(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error(" ",&tok);
-
-    return PARSER_NOERR;
-}
-
-static parser_err show(Node** base)
-{
-    LOG$("Entering");
-    
-    assert(base);
-
-    Token tok = {};
-    CONSUME(&tok);
-
-    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_SHOW)
-        syntax_error(" ", &tok);
-    
-    MK_NODE(base, &tok);
-
-    CONSUME(&tok);
-    if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error(" ", &tok);
-    
-    return PARSER_NOERR;
-}
-
-static parser_err pixel(Node** base)
-{
-    LOG$("Entering");
-
-    assert(base);
-
-    Token tok = {};
-    CONSUME(&tok);
-
-    if(tok.type != TYPE_KEYWORD || tok.val.key != TOK_PIXEL)
-        syntax_error(" ", &tok);
-    
-    MK_NODE(base, &tok);
-
-    CONSUME(&tok);
-    if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error(" ", &tok);
-    
-    expression(&(*base)->left);
-
-    CONSUME(&tok);
-    if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
-        syntax_error(" ", &tok);
-    
-    expression(&(*base)->right);
-
-    CONSUME(&tok);
-    if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error(" ", &tok);
-    
-    CONSUME(&tok);
-    if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error(" ", &tok);
+        syntax_error("Terminational literal expected",&tok);
 
     return PARSER_NOERR;
 }
@@ -636,16 +580,6 @@ static parser_err statement(Node** base)
             PASS$(!assign(base), return PARSER_PASS_ERR; );
             return PARSER_NOERR;
         }
-        else if(tok.val.key == TOK_SHOW)
-        {
-            PASS$(!show(base), return PARSER_PASS_ERR; );
-            return PARSER_NOERR;
-        }
-        else if(tok.val.key == TOK_PIXEL)
-        {
-            PASS$(!pixel(base), return PARSER_PASS_ERR; );
-            return PARSER_NOERR;
-        }
     }
     
     if(tok.type == TYPE_ID)
@@ -661,7 +595,7 @@ static parser_err statement(Node** base)
     PASS$(!expression(base), return PARSER_PASS_ERR; );
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_SEMICOLON)
-        syntax_error(" ",&tok);
+        syntax_error("Terminational literal expected",&tok);
     
     return PARSER_NOERR;
 }

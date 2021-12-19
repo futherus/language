@@ -3,7 +3,7 @@ SRCFLDR:= code
 LOGFLDR:= logs
 OBJFLDR:= inter
 
-SRC:=     test
+SRC:=     quadratic
 
 CODE:=   $(SRCFLDR)/$(SRC).blr
 TREE:=   $(OBJFLDR)/$(SRC).tree
@@ -26,5 +26,9 @@ asm:
 	$(BINFLDR)/asm.exe --src $(ASM) --dst $(TARGET)
 cpu:
 	$(BINFLDR)/cpu.exe --src $(TARGET)
+
+t_cpu:
+	$(BINFLDR)/cpu_test.exe --src $(TARGET)
+
 clean:
 	rm -rf $(OBJFLDR)/*.* $(LOGFLDR)/*.* $(LOGFLDR)/tree_dump/*.*

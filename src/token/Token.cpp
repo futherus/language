@@ -147,11 +147,11 @@ void token_nametable_dstr(Token_nametable* tok_table)
         sprintf(buffer, "%s", (NAME));          \
         break;                                  \
 
-char* demangle(const Token* tok)
+char* std_demangle(const Token* tok)
 {
     assert(tok);
     
-    static char buffer[1000] = "";
+    static char buffer[BUFSIZ] = "";
 
     switch(tok->type)
     {
@@ -227,3 +227,99 @@ char* demangle(const Token* tok)
 #undef DEF_KEY
 #undef DEF_EMB
 #undef DEF_AUX
+
+#define DEF_OP(NAME, STD_NAME, MANGLE)          \
+    case(TOK_##MANGLE):                         \
+        sprintf(buffer, "%s", (NAME));          \
+        break;                                  \
+
+#define DEF_KEY(NAME, STD_NAME, MANGLE)         \
+    case(TOK_##MANGLE):                         \
+        sprintf(buffer, "%s", (NAME));          \
+        break;                                  \
+    
+#define DEF_EMB(NAME, STD_NAME, MANGLE)         \
+    case(TOK_##MANGLE):                         \
+        sprintf(buffer, "%s", (NAME));          \
+        break;                                  \
+
+#define DEF_AUX(NAME, MANGLE)                   \
+    case(TOK_##MANGLE):                         \
+        sprintf(buffer, "%s", (NAME));          \
+        break;                                  \
+
+char* demangle(const Token* tok)
+{
+    assert(tok);
+    
+    static char buffer[BUFSIZ] = "";
+
+    switch(tok->type)
+    {
+        case TYPE_NUMBER:
+            sprintf(buffer, "%lg", tok->val.num);
+            break;
+
+        case TYPE_ID :
+            sprintf(buffer, "%s", tok->val.name);
+            break;
+
+        case TYPE_OP:
+        {
+            switch(tok->val.op)
+            {
+                #include "../reserved_operators.inc"
+
+                default:
+                    assert(0);
+            }
+
+            break;
+        }
+        case TYPE_KEYWORD:
+        {
+            switch(tok->val.key)
+            {
+                #include "../reserved_keywords.inc"
+
+                default:
+                    assert(0);
+            }
+
+            break;
+        }
+        case TYPE_EMBED:
+        {
+            switch(tok->val.emb)
+            {
+                #include "../reserved_embedded.inc"
+
+                default:
+                    assert(0);
+            }
+
+            break;
+        }
+        case TYPE_AUX:
+        {
+            switch(tok->val.aux)
+            {
+                #include "../reserved_auxiliary.inc"
+
+                default:
+                    assert(0);
+            }
+            
+            break;
+        }
+        case TYPE_EOF:
+        {
+            sprintf(buffer, "EOF");
+            break;
+        }
+        default: case TYPE_NOTYPE :
+            assert(0 && tok->type);
+    }
+
+    return buffer;
+}

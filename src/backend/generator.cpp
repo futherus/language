@@ -26,14 +26,14 @@ static generator_err IS_ERROR = GENERATOR_NOERR;
 do                                                                                      \
 {                                                                                       \
     IS_ERROR = GENERATOR_SEMANTIC_ERROR;                                                \
-    fprintf(stderr, "\x1b[31mSemantic error:\x1b[0m %s : %s\n", (MSG_), demangle(TOK_));\
+    fprintf(stderr, "\x1b[31mSemantic error:\x1b[0m %s : %s\n", (MSG_), std_demangle(TOK_));\
     FILE* stream_ = dumpsystem_get_opened_stream();                                     \
                                                                                         \
     if(stream_)                                                                         \
     {                                                                                   \
         fprintf(stream_, "<span class = \"error\">Semantic error: %s : %s\n</span>"     \
                          "\t\t\t\tat %s:%d:%s\n",                                       \
-                         (MSG_), demangle(TOK_),                                        \
+                         (MSG_), std_demangle(TOK_),                                        \
                          __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
                                                                                         \
         return GENERATOR_NOERR;                                                         \
@@ -44,14 +44,14 @@ do                                                                              
 do                                                                                      \
 {                                                                                       \
     IS_ERROR = GENERATOR_FORMAT_ERROR;                                                  \
-    fprintf(stderr, "\x1b[31mFormat error:\x1b[0m %s : %s\n", (MSG_), demangle(TOK_));  \
+    fprintf(stderr, "\x1b[31mFormat error:\x1b[0m %s : %s\n", (MSG_), std_demangle(TOK_));  \
     FILE* stream_ = dumpsystem_get_opened_stream();                                     \
                                                                                         \
     if(stream_)                                                                         \
     {                                                                                   \
         fprintf(stream_, "<span class = \"error\">Format error: %s : %s\n</span>"       \
                          "\t\t\t\tat %s : %d : %s\n",                                   \
-                         (MSG_), demangle(TOK_),                                        \
+                         (MSG_), std_demangle(TOK_),                                        \
                          __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
                                                                                         \
         return GENERATOR_NOERR;                                                         \
@@ -89,22 +89,27 @@ static generator_err variable(Node* node)
     if(node->left)
         semantic_error("Variable has 'const' specifier in expression", &node->tok);
     
-    if(node->right)
-        PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-    else
-        print_tab("push 0\n");
-
-    print_tab("pop rex\n");
-
     Variable* var = 0;
-    
+
+    if(node->right)
+    {
+        PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+        
+        print_tab("pop rex\n");
+        print_tab("push [rex + ");
+    }
+    else
+    {
+        print_tab("push [");
+    }
+
     if((var = vartable_find(GLOBALS, node->tok.val.name)) != nullptr)
     {
-        print_tab("push [rcx + %lld + rex]\n", var->offset);
+        print("rcx + %lld]\n", var->offset);
     }
     else if((var = vartable_find(LOCALS, node->tok.val.name)) != nullptr)
     {
-        print_tab("push [rbx + %lld + rex]\n", var->offset);
+        print("rbx + %lld]\n", var->offset);
     }
     else
     {
@@ -124,8 +129,8 @@ static generator_err embedded(Node* node)
     {
         case TOK_SIN:
         {
-            if(!node->right)
-                format_error("Embedded function requires argument", &node->tok);
+            if(!node->right || node->left)
+                format_error("Embedded 'sin' requires 1 argument", &node->tok);
 
             PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
@@ -135,8 +140,8 @@ static generator_err embedded(Node* node)
         }
         case TOK_COS:
         {
-            if(!node->right)
-                format_error("Embedded function requires argument", &node->tok);
+            if(!node->right || node->left)
+                format_error("Embedded 'cos' requires 1 argument", &node->tok);
 
             PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
@@ -147,7 +152,7 @@ static generator_err embedded(Node* node)
         case TOK_PRINT:
         {
             if(!node->right)
-                format_error("Embedded function requires argument", &node->tok);
+                format_error("Embedded 'print' requires 1 argument", &node->tok);
 
             PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
@@ -157,9 +162,80 @@ static generator_err embedded(Node* node)
             break;
         }
         case TOK_SCAN:
-        {            
-            print_tab("in\n");
+        {
+            if(node->right || node->left)
+                format_error("Embedded 'scan' cannot has arguments", &node->tok);
 
+            print_tab("in\n");
+            break;
+        }
+        case TOK_SHOW:
+        {
+            if(!node->right || !node->left)
+                format_error("Embedded 'show' requires 2 arguments", &node->tok);
+            
+            print("\n");
+
+            if(node->left->tok.type != TYPE_ID)
+                format_error("Embedded 'show' requires variable as first argument", &node->left->tok);
+
+            Variable* var = {};
+
+            if(node->left->right)
+            {
+                PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
+                
+                print_tab("pop rex\n");
+                print_tab("push rex + ");
+            }
+            else
+            {
+                print_tab("push ");
+            }
+
+            if((var = vartable_find(GLOBALS, node->left->tok.val.name)) != nullptr)
+            {
+                print("rcx + %lld\n", var->offset);
+            }
+            else if((var = vartable_find(LOCALS, node->left->tok.val.name)) != nullptr)
+            {
+                print("rbx + %lld\n", var->offset);
+            }
+            else
+            {
+                semantic_error("Variable wasn't declared", &node->tok);
+            }
+
+            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+
+            print_tab("pop rfx\n");
+            print_tab("pop rex\n");
+
+            print_tab("show rex, rfx\n");
+
+            print_tab("push 0\n\n");
+            break;
+        }
+        case TOK_INT:
+        {
+            if(!node->right || node->left)
+                format_error("Embedded 'int' requires 1 argument", &node->tok);
+
+            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+
+            print_tab("pop rex\n");
+            print_tab("int rex\n");
+            break;
+        }
+        case TOK_SQRT:
+        {
+            if(!node->right || node->left)
+                format_error("Embedded 'sqrt' requires 1 argument", &node->tok);
+
+            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+
+            print_tab("pop rex\n");
+            print_tab("sqrt rex\n");
             break;
         }
         default:
@@ -400,40 +476,6 @@ static generator_err terminational(Node* node)
     return GENERATOR_NOERR;
 }
 
-static generator_err show(Node* node)
-{
-    assert(node);
-    assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_SHOW);
-
-    if(node->left || node->right)
-        format_error("Show statement cannot has descendants", &node->tok);
-    
-    print_tab("dspl\n");
-
-    return GENERATOR_NOERR;
-}
-
-static generator_err pixel(Node* node)
-{
-    assert(node);
-    assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_PIXEL);
-
-    if(!node->left || !node->right)
-        format_error("Pixel statement missing descendants", &node->tok);
-    
-    print("\n");
-
-    expression(node->left);
-    expression(node->right);
-
-    print_tab("pop rfx\n");
-    print_tab("pop rex\n");
-
-    print_tab("pix rex, rfx, 1\n\n");
-
-    return GENERATOR_NOERR;
-}
-
 static generator_err assignment(Node* node, Variable_table* vartable)
 {
     assert(node && vartable);
@@ -510,25 +552,20 @@ static generator_err assignment(Node* node, Variable_table* vartable)
         PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
         print_tab("pop rex\n");
 
-        if(is_global)
-        {
-            print_tab("pop [rcx + %lld + rex]\n", ptr->offset);
-        }
-        else
-        {
-            print_tab("pop [rbx + %lld + rex]\n", ptr->offset);
-        }
+        print_tab("pop [rex + ");
     }
     else
     {
-        if(is_global)
-        {
-            print_tab("pop [rcx + %lld]\n", ptr->offset);
-        }
-        else
-        {
-            print_tab("pop [rbx + %lld]\n", ptr->offset);
-        }
+        print_tab("pop [");
+    }
+
+    if(is_global)
+    {
+        print("rcx + %lld]\n", ptr->offset);
+    }
+    else
+    {
+        print("rbx + %lld]\n", ptr->offset);
     }
 
     return GENERATOR_NOERR;
@@ -559,16 +596,6 @@ static generator_err statement(Node* node)
         else if(node->right->tok.val.key == TOK_RETURN)
         {
             PASS$(!terminational(node->right), return GENERATOR_PASS_ERROR; );
-            return GENERATOR_NOERR;
-        }
-        else if(node->right->tok.val.key == TOK_SHOW)
-        {
-            PASS$(!show(node->right), return GENERATOR_PASS_ERROR; );
-            return GENERATOR_NOERR;
-        }
-        else if(node->right->tok.val.key == TOK_PIXEL)
-        {
-            PASS$(!pixel(node->right), return GENERATOR_PASS_ERROR; );
             return GENERATOR_NOERR;
         }
     }

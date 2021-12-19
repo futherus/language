@@ -62,7 +62,7 @@ static void tree_print_node_(Node* node, size_t)
 {
     FILE* stream = TEMP_GRAPH_STREAM;
 
-    PRINT("node%p[label = \"%s\", ", node, demangle(&node->tok));
+    PRINT("node%p[label = \"%s\", ", node, std_demangle(&node->tok));
 
     switch(node->tok.type)
     {

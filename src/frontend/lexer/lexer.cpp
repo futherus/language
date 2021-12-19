@@ -120,6 +120,23 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
         }
         wordlen_(data + pos, &n_read);
 
+        if(data[pos] == '>')
+        {
+            ptrdiff_t comment_start = pos;
+
+            while(data[pos] != '<' && data[pos] != '\0')
+                pos++;
+            
+            if(data[pos] == '\0')
+                lexer_err("Unterminated comment", data + comment_start);
+            
+            pos++;
+            continue;
+        }
+
+        if(data[pos] == '<')
+            lexer_err("Comment termination without comment start", data + pos);
+
         #include "../../reserved_operators.inc"
         #include "../../reserved_keywords.inc"
         #include "../../reserved_embedded.inc"

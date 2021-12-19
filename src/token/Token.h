@@ -94,6 +94,7 @@ void      token_dump_init(FILE* dump_stream);
 token_err token_nametable_add(Token_nametable* tok_table, char** dst_ptr, const char name[], ptrdiff_t name_sz);
 void      token_nametable_dstr(Token_nametable* tok_table);
 
+char*     std_demangle(const Token* tok);
 char*     demangle(const Token* tok);
 
 #endif // TOKEN_H
