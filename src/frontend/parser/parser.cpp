@@ -256,11 +256,35 @@ static parser_err primary(Node** base)
     return PARSER_NOERR;
 }
 
-static parser_err term(Node** base)
+static parser_err power(Node** base)
 {
     LOG$("Entering");
 
     PASS$(!primary(base), return PARSER_PASS_ERR; );
+
+    Token tok = {};
+    PEEK(&tok, 0);
+    
+    if(tok.type == TYPE_OP && tok.val.op == TOK_POWER)
+    {
+        CONSUME(&tok);
+
+        Node* tmp = *base;
+
+        MK_NODE(base, &tok);
+
+        (*base)->left = tmp;
+        PASS$(!primary(&(*base)->right), return PARSER_PASS_ERR; );
+    }
+
+    return PARSER_NOERR;
+}
+
+static parser_err term(Node** base)
+{
+    LOG$("Entering");
+
+    PASS$(!power(base), return PARSER_PASS_ERR; );
 
     Token tok = {};
     PEEK(&tok, 0);
@@ -274,7 +298,7 @@ static parser_err term(Node** base)
         MK_NODE(base, &tok);
         
         (*base)->left = tmp;
-        PASS$(!primary(&(*base)->right), return PARSER_PASS_ERR; );
+        PASS$(!power(&(*base)->right), return PARSER_PASS_ERR; );
         
         PEEK(&tok, 0);
     }
@@ -612,13 +636,13 @@ static parser_err define(Node** base)
     Token tok = {};
     CONSUME(&tok);
     if(tok.type != TYPE_ID)
-        syntax_error(" ",&tok);
+        syntax_error("Function name expected",&tok);
     
     MK_NODE(&(*base)->left->left, &tok);
     
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (function parameters)",&tok);
     
     PEEK(&tok, 0);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
@@ -636,7 +660,7 @@ static parser_err define(Node** base)
 
         CONSUME(&tok);
         if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
-            syntax_error(" ",&tok);
+            syntax_error("Expected comma (function parameters)",&tok);
 
         PASS$(!expression(&(*base)->left->right->right), return PARSER_PASS_ERR; );
         (*base)->left->right->left = tmp;
@@ -646,11 +670,11 @@ static parser_err define(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (function parameters)",&tok);
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_LFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Opening parenthesis expected (function body)",&tok);
 
     PEEK(&tok, 0);
     while(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
@@ -666,7 +690,7 @@ static parser_err define(Node** base)
 
     CONSUME(&tok);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
-        syntax_error(" ",&tok);
+        syntax_error("Closing parenthesis expected (function body)",&tok);
 
     return PARSER_NOERR;
 }
@@ -695,7 +719,7 @@ static parser_err general(Node** base)
         }
 
         PEEK(&tok, 1);
-        if(tok.type == TYPE_OP && tok.val.op == TOK_ASSIGN)
+        if(tok.type == TYPE_OP && (tok.val.op == TOK_ASSIGN || tok.val.op == TOK_LQPAR))
         {
             PASS$(!assign(&(*base)->right), return PARSER_PASS_ERR; );
             PEEK(&tok, 0);

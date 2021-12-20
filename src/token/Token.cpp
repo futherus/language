@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "Token.h"
+#include "../reserved_names.h"
 #include "../dumpsystem/dumpsystem.h"
 
 static const ptrdiff_t TOK_MIN_CAP     = 8;
@@ -257,13 +258,19 @@ char* demangle(const Token* tok)
     switch(tok->type)
     {
         case TYPE_NUMBER:
+        {
             sprintf(buffer, "%lg", tok->val.num);
             break;
-
+        }
         case TYPE_ID :
-            sprintf(buffer, "%s", tok->val.name);
-            break;
+        {
+            if(strcmp(MAIN_STD_NAME, tok->val.name) == 0)
+                sprintf(buffer, "%s", MAIN_NAME);
+            else
+                sprintf(buffer, "%s", tok->val.name);
 
+            break;
+        }
         case TYPE_OP:
         {
             switch(tok->val.op)
@@ -318,7 +325,9 @@ char* demangle(const Token* tok)
             break;
         }
         default: case TYPE_NOTYPE :
+        {
             assert(0 && tok->type);
+        }
     }
 
     return buffer;

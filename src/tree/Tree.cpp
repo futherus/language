@@ -58,7 +58,7 @@ static tree_err add_chunk_(Tree* tree)
 
 tree_err tree_dstr(Tree* tree)
 {
-    ASSERT(tree, TREE_NULLPTR);
+    assert(tree);
 
     for(ptrdiff_t iter = 0; iter < tree->cap / TREE_CHUNK_SIZE; iter++)
         free(tree->ptr_arr[iter]);
@@ -68,7 +68,7 @@ tree_err tree_dstr(Tree* tree)
 
 tree_err tree_add(Tree* tree, Node** base_ptr, const Token* data)
 {
-    ASSERT(tree && base_ptr && data, TREE_NULLPTR);
+    assert(tree && base_ptr && data);
 
     if(tree->cap == tree->size)
         PASS(!add_chunk_(tree), TREE_BAD_ALLOC);
@@ -99,7 +99,7 @@ static tree_err tree_copy_(Tree* tree, Node** ptr, Node* orig)
 
 tree_err tree_copy(Tree* tree, Node** base_ptr, Node* origin)
 {
-    ASSERT(tree && base_ptr && origin, TREE_NULLPTR);
+    assert(tree && base_ptr && origin);
 
     PASS(!tree_copy_(tree, base_ptr, origin), TREE_BAD_ALLOC);
     
@@ -128,8 +128,8 @@ static void tree_visitor_(Node* node)
 
 tree_err tree_visitor(Tree* tree, void (*function)(Node* node, size_t depth))
 {
-    ASSERT(tree && function, TREE_NULLPTR);
-    ASSERT(tree->root, TREE_NOTINIT);
+    assert(tree && function);
+    assert(tree->root);
 
     VISITOR_FUNCTION_ = function;
     VISITOR_DEPTH_    = -1;

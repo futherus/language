@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "backend.h"
+#include "Tree.h"
 #include "../dumpsystem/dumpsystem.h"
 
 static void clean_whitespaces_(const char data[], ptrdiff_t* pos)
@@ -163,9 +163,9 @@ static void peek(Token* tok, ptrdiff_t offset, Token_array* tok_arr)
     *tok = tok_arr->data[tok_arr->pos + offset];
 }
 
-#define format_error(TOK) ASSERT$(0, Tree read: wrong format, return BACKEND_FORMAT_ERROR; )
+#define format_error(TOK) ASSERT$(0, Tree read: wrong format, return TREE_FORMAT_ERROR; )
 
-static backend_err read_node_(Node** base, Tree* tree, Token_array* tok_arr)
+static tree_err read_node_(Node** base, Tree* tree, Token_array* tok_arr)
 {
     assert(base);
     
@@ -177,26 +177,26 @@ static backend_err read_node_(Node** base, Tree* tree, Token_array* tok_arr)
     
     peek(&tok, 0, tok_arr);
     if(tok.type == TYPE_OP && tok.val.op == TOK_LRPAR)
-        PASS$(!read_node_(base, tree, tok_arr), return BACKEND_TREE_FAIL; );
+        PASS$(!read_node_(base, tree, tok_arr), return TREE_BAD_ALLOC; );
     
     consume(&tok, tok_arr);
 
     Node* tmp = *base;
-    PASS$(!tree_add(tree, base, &tok), return BACKEND_TREE_FAIL; );
+    PASS$(!tree_add(tree, base, &tok), return TREE_BAD_ALLOC; );
     (*base)->left = tmp;
 
     peek(&tok, 0, tok_arr);
     if(tok.type == TYPE_OP && tok.val.op == TOK_LRPAR)
-        PASS$(!read_node_(&(*base)->right, tree, tok_arr), return BACKEND_TREE_FAIL; );
+        PASS$(!read_node_(&(*base)->right, tree, tok_arr), return TREE_BAD_ALLOC; );
     
     consume(&tok, tok_arr);
     if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
         format_error(&tok);
 
-    return BACKEND_NOERR;
+    return TREE_NOERR;
 }
 
-backend_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[], ptrdiff_t data_sz)
+tree_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[], ptrdiff_t data_sz)
 {
     assert(tree && tok_table && data);
 
@@ -209,10 +209,10 @@ backend_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[],
     if(token_error)
     {
         token_array_dstr(&tok_arr);
-        PASS$(!token_error, return BACKEND_READ_FAIL; );
+        PASS$(!token_error, return TREE_READ_FAIL; );
     }
 
-    backend_err tree_error = read_node_(&tree->root, tree, &tok_arr);
+    tree_err tree_error = read_node_(&tree->root, tree, &tok_arr);
     if(tree_error)
     {
         token_array_dump(&tok_arr);
@@ -221,7 +221,7 @@ backend_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[],
 
     token_array_dstr(&tok_arr);
 
-    PASS$(!tree_error, return BACKEND_READ_FAIL; );
+    PASS$(!tree_error, return TREE_READ_FAIL; );
     
-    return BACKEND_NOERR;
+    return TREE_NOERR;
 }

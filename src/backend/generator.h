@@ -13,7 +13,6 @@ enum generator_err
 };
 
 const ptrdiff_t MEMORY_GLOBAL = 0;
-const ptrdiff_t MEMORY_LOCAL  = 64;
 
 generator_err generator(Tree* tree, FILE* ostream);
 

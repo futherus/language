@@ -17,6 +17,4 @@ enum frontend_err
     FRONTEND_OUTFILE_FAIL = 9,
 };
 
-void tree_write(Tree* tree, FILE* ostream);
-
 #endif // FRONTEND_H

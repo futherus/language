@@ -3,20 +3,24 @@ SRCFLDR:= code
 LOGFLDR:= logs
 OBJFLDR:= inter
 
-SRC:=     quadratic
+SRC:=     benchmark
 
 CODE:=   $(SRCFLDR)/$(SRC).blr
 TREE:=   $(OBJFLDR)/$(SRC).tree
 ASM:=    $(OBJFLDR)/$(SRC).a
 TARGET:= $(OBJFLDR)/$(SRC).exec
+TRANSP:= $(SRCFLDR)/$(SRC)_T.blr
+
 
 all: frontend backend asm cpu
 	
 compile: frontend backend asm
 
-c-compile: backend asm
-
 run: cpu
+
+t-compile: detransp c-compile
+
+c-compile: backend asm
 
 frontend:
 	$(BINFLDR)/frontend.exe --src $(CODE) --dst $(TREE)
@@ -25,10 +29,12 @@ backend:
 asm:
 	$(BINFLDR)/asm.exe --src $(ASM) --dst $(TARGET)
 cpu:
-	$(BINFLDR)/cpu.exe --src $(TARGET)
+	$(BINFLDR)/cpu.exe --src $(TARGET) < $(SRCFLDR)/input.txt
 
-t_cpu:
-	$(BINFLDR)/cpu_test.exe --src $(TARGET)
+transp:
+	$(BINFLDR)/transpiler.exe --src $(TREE) --dst $(TRANSP)
+detransp:
+	$(BINFLDR)/frontend.exe --src $(TRANSP) --dst $(TREE)
 
 clean:
 	rm -rf $(OBJFLDR)/*.* $(LOGFLDR)/*.* $(LOGFLDR)/tree_dump/*.*

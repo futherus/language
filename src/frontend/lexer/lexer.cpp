@@ -5,6 +5,7 @@
 
 #include "lexer.h"
 #include "../../dumpsystem/dumpsystem.h"
+#include "../../reserved_names.h"
 
 static void clean_whitespaces_(const char data[], ptrdiff_t* pos)
 {
@@ -120,11 +121,11 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
         }
         wordlen_(data + pos, &n_read);
 
-        if(data[pos] == '>')
+        if(data[pos] == COMMENT_BEGIN)
         {
             ptrdiff_t comment_start = pos;
 
-            while(data[pos] != '<' && data[pos] != '\0')
+            while(data[pos] != COMMENT_END && data[pos] != '\0')
                 pos++;
             
             if(data[pos] == '\0')
@@ -134,7 +135,7 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
             continue;
         }
 
-        if(data[pos] == '<')
+        if(data[pos] == COMMENT_END)
             lexer_err("Comment termination without comment start", data + pos);
 
         #include "../../reserved_operators.inc"
@@ -144,8 +145,8 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
         if(!n_read)
             lexer_err("Unknown symbol", data + pos);
 
-        if(strncmp("пачатак", data + pos, n_read) == 0)
-            PASS$(!token_nametable_add(tok_table, &tmp.val.name, "main", sizeof("main") - 1), return LEXER_BAD_ALLOC; );
+        if(strncmp(MAIN_NAME, data + pos, n_read) == 0)
+            PASS$(!token_nametable_add(tok_table, &tmp.val.name, MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1), return LEXER_BAD_ALLOC; );
         else
             PASS$(!token_nametable_add(tok_table, &tmp.val.name, data + pos, n_read), return LEXER_BAD_ALLOC; );
 

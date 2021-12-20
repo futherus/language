@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "frontend.h"
+#include "Tree.h"
 
 #define PRINT(format, ...) fprintf(stream, format, ##__VA_ARGS__)
 

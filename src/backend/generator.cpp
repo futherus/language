@@ -6,6 +6,7 @@
 #include "nametable/nametable.h"
 #include "../dumpsystem/dumpsystem.h"
 #include "hash.h"
+#include "../reserved_names.h"
 
 /*
     rax -- return value
@@ -247,22 +248,33 @@ static generator_err embedded(Node* node)
     return GENERATOR_NOERR;
 }
 
-#define PRINT_CMD(MANGLE, TXT)              \
-    if(node->tok.val.op == TOK_##MANGLE)    \
-    {                                       \
-        print_tab("%s\n", (TXT));           \
-    }                                       \
-    else                                    \
+#define PRINT_CMD(MANGLE, TXT)                                        \
+    if(node->tok.val.op == TOK_##MANGLE)                              \
+    {                                                                 \
+        if(!node->left || !node->right)                               \
+            format_error("Operator wrong descendants", &node->tok);   \
+        print_tab("%s\n", (TXT));                                     \
+    }                                                                 \
+    else                                                              \
     
 static generator_err oper(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_OP);
 
+    if(node->tok.val.op == TOK_NOT)
+    {
+        if(node->left || !node->right)
+            format_error("Operator wrong descendants", &node->tok);
+        print_tab("push 0\n");
+        print_tab("eq\n");
+    }
+    else
     PRINT_CMD(ADD,   "add")
     PRINT_CMD(SUB,   "sub")
     PRINT_CMD(MUL,   "mul")
     PRINT_CMD(DIV,   "div")
+    PRINT_CMD(POWER, "pow")
     PRINT_CMD(EQ,    "eq")
     PRINT_CMD(NEQ,   "neq")
     PRINT_CMD(GREAT, "gr")
@@ -317,7 +329,7 @@ static generator_err call(Node* node)
     if(!func)
         semantic_error("Function wasn't defined", &node->left->tok);
     
-    if(strcmp("main", func->id) == 0)
+    if(strcmp(MAIN_STD_NAME, func->id) == 0)
         semantic_error("'main' can't be called", &node->left->tok);
     
     print("\n");
@@ -786,14 +798,14 @@ generator_err generator(Tree* tree, FILE* ostream)
               "pop rcx\n",
                MEMORY_GLOBAL);
 
-    print_tab("push %lld\n"
-              "pop rbx\n",
-               MEMORY_LOCAL);
-
     PASS$(!generate_globals(tree->root), return GENERATOR_PASS_ERROR; );
     vartable_dump(&globals);
 
-    print_tab("call func__%llx\n", fnv1_64("main", sizeof("main") - 1));
+    print_tab("push %lld\n"
+              "pop rbx\n",
+              vartable_end(&globals));
+
+    print_tab("call func__%llx\n", fnv1_64(MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1));
 
     print_tab("hlt\n");
 

@@ -34,12 +34,10 @@ struct Tree
 
 enum tree_err
 {
-    TREE_NOERR      = 0,
-    TREE_NULLPTR    = 1,
-    TREE_BAD_ALLOC  = 2,
-    TREE_REINIT     = 3,
-    TREE_NOTINIT    = 4,
-    TREE_STACK_FAIL = 5,
+    TREE_NOERR        = 0,
+    TREE_READ_FAIL    = 1,
+    TREE_BAD_ALLOC    = 2,
+    TREE_FORMAT_ERROR = 3,
 };
 
 tree_err tree_dstr(Tree* tree);
@@ -48,6 +46,9 @@ tree_err tree_add(Tree* tree, Node** base_ptr, const Token* data);
 tree_err tree_copy(Tree* tree, Node** base_ptr, Node* origin);
 
 tree_err tree_visitor(Tree* tree, void (*function)(Node* node, size_t depth));
+
+tree_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[], ptrdiff_t data_sz);
+void     tree_write(Tree* tree, FILE* ostream);
 
 void     tree_dump_init(FILE* dumpstream = nullptr);
 void     tree_dump(Tree* tree, const char msg[], tree_err errcode = TREE_NOERR);
