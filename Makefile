@@ -3,7 +3,7 @@ SRCFLDR:= code
 LOGFLDR:= logs
 OBJFLDR:= inter
 
-SRC:=     benchmark
+SRC:=     quadratic
 
 CODE:=   $(SRCFLDR)/$(SRC).blr
 TREE:=   $(OBJFLDR)/$(SRC).tree

@@ -56,7 +56,7 @@ TRY__
     ASSERT$(istream,                                        BACKEND_INFILE_FAIL,    FAIL__);
 
     file_sz = fread(data, sizeof(char), file_sz, istream);
-    ASSERT$(!ferror(istream),                                BACKEND_READ_FAIL,      FAIL__);
+    ASSERT$(!ferror(istream),                               BACKEND_READ_FAIL,      FAIL__);
 
     fclose(istream);
     istream = nullptr;
@@ -69,7 +69,7 @@ TRY__
     token_nametable_dump(&tok_table);
 
     ostream = fopen(outfile_name, "w");
-    ASSERT$(ostream,                                        BACKEND_INFILE_FAIL,    FAIL__);
+    ASSERT$(ostream,                                        BACKEND_OUTFILE_FAIL,    FAIL__);
 
     ASSERT$(!generator(&tree, ostream),                     BACKEND_GENERATOR_FAIL, FAIL__);
 

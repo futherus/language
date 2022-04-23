@@ -2,7 +2,8 @@
 #define HASH_H
 
 #include <ctype.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 /**
  * Get 64-bit FNV1 hash integer.

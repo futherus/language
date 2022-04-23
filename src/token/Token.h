@@ -1,6 +1,7 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 enum token_type

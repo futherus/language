@@ -1,6 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "../../token/Token.h"

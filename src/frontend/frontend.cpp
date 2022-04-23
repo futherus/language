@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <assert.h>
-#include <windows.h>
 
 #include "parser/parser.h"
 #include "lexer/lexer.h"
@@ -26,9 +25,6 @@ int main(int argc, char* argv[])
 {
     tree_dump_init(dumpsystem_get_stream(frontend_log));
     token_dump_init(dumpsystem_get_stream(frontend_log));
-
-    SetConsoleCP(65001);
-    SetConsoleOutputCP(65001);
 
     char  infile_name[FILENAME_MAX]  = "";
     char  outfile_name[FILENAME_MAX] = "";
@@ -54,7 +50,6 @@ int main(int argc, char* argv[])
 TRY__
     ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
                                                 FRONTEND_INFILE_FAIL,  FAIL__);
-
     data = (char*) calloc(file_sz, sizeof(char));
     ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
@@ -71,7 +66,7 @@ TRY__
     ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
     lexer_error = lexer(&tok_arr, &tok_table, data, file_sz);
-
+    
     free(data);
     data = nullptr;
 

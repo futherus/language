@@ -10,8 +10,9 @@ enum backend_err
     BACKEND_SEMANTIC_ERROR = 2,
     BACKEND_READ_FAIL      = 3,
     BACKEND_INFILE_FAIL    = 4,
-    BACKEND_BAD_ALLOC      = 5,
-    BACKEND_GENERATOR_FAIL = 6,
+    BACKEND_OUTFILE_FAIL   = 5,
+    BACKEND_BAD_ALLOC      = 6,
+    BACKEND_GENERATOR_FAIL = 7,
 };
 
 #endif // BACKEND_H

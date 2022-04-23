@@ -98,6 +98,7 @@ static void tree_print_node_(Node* node, size_t)
     if(node->right != nullptr)
         PRINT("node%p -> node%p [color = orange];\n", node, node->right);
 }
+
 static void tree_graph_dump_(Tree* tree, const char* graphviz_png_name)
 {
     char temp[FILENAME_MAX] = "";
@@ -120,7 +121,7 @@ static void tree_graph_dump_(Tree* tree, const char* graphviz_png_name)
     fclose(stream);
 
     char sys_cmd[FILENAME_MAX] = "";
-    sprintf(sys_cmd, "dot %s/%s -q -Tpng -o %s/%s",
+    sprintf(sys_cmd, "dot %s/%s -Tpng -o %s/%s",
             TREE_DUMPFILE_DIR, GRAPHVIZ_TEMP_FILE, TREE_DUMPFILE_DIR, graphviz_png_name);
 
     system(sys_cmd);
