@@ -42,8 +42,8 @@ CXXFLAGS ?= 	   -O2 -g --static-pie -std=c++14 -fmax-errors=100 -Wall -Wextra   
     			   -fsanitize=vptr                                                 				\
     			   -lm -pie 					 
 
-SRC 	:= degenerator.cpp transpiler.cpp
-OUT 	:= transpiler.o
+SRC 	:= Token.cpp Token_dump.cpp
+OUT 	:= Token.o
 
 # temporary object files
 OBJ 	:= $(addprefix $(OBJDIR)/, $(SRC:.cpp=.tmp.o))

@@ -21,8 +21,8 @@ static const char TREE_DUMPFILE[] = "logs/tree_dump.html";
 
 static FILE* TEMP_GRAPH_STREAM = nullptr;
 
-static const char GRAPHVIZ_PNG_NAME[]  = "tree_dump/graphviz_dump";
-static const char GRAPHVIZ_TEMP_FILE[] = "tree_dump/graphviz_temp.txt";
+static const char GRAPHVIZ_PNG_NAME[]  = "graphviz_dump";
+static const char GRAPHVIZ_TEMP_FILE[] = "graphviz_temp.txt";
 
 static const char GRAPHVIZ_INTRO[] =
 R"(
@@ -44,14 +44,17 @@ static char* graphviz_png_()
 
     FILE* probe = nullptr;
     long iter = 0;
-    do
+
+    while(true)
     {
         iter++;
         sprintf(filename, "%s/%s_%ld.png", TREE_DUMPFILE_DIR, GRAPHVIZ_PNG_NAME, iter);
         probe = fopen(filename, "r");
+        if(probe == nullptr)
+            break;
+        
+        fclose(probe);
     }
-    while(probe != nullptr);
-    fclose(probe);
 
     sprintf(filename, "%s_%ld.png", GRAPHVIZ_PNG_NAME, iter);
 
@@ -199,7 +202,7 @@ void tree_dump(Tree* tree, const char msg[], tree_err errcode)
         return;
     }
 
-    PRINT("size: %lld\n" "capacity: %lld\n", tree->size, tree->cap);
+    PRINT("size: %ld\n" "capacity: %ld\n", tree->size, tree->cap);
 
     if(!tree->root)
     {

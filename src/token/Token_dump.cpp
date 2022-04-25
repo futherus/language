@@ -43,10 +43,10 @@ void token_array_dump(Token_array* tok_arr)
     PRINT("\n\n<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n"
           "<tr><th colspan=\"3\" class = \"title\">Token array</th></tr>\n");
     
-    PRINT("<tr><td colspan=\"3\">\n\tsize: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"3\">\n\tcapacity: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"3\">\n\tposition: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"3\">\n\tEOF: %lld\n</td></tr>\n",
+    PRINT("<tr><td colspan=\"3\">\n\tsize: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"3\">\n\tcapacity: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"3\">\n\tposition: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"3\">\n\tEOF: %ld\n</td></tr>\n",
           tok_arr->size, tok_arr->cap, tok_arr->pos, tok_arr->eof);
 
     PRINT("<tr><th>name</th><th>std name</th><th>mangle</th></tr>\n");
@@ -143,8 +143,8 @@ void token_nametable_dump(Token_nametable* tok_table)
     PRINT("<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n");
     PRINT("<tr><th colspan=\"2\" class = \"title\">Token nametable</th></tr>\n");
 
-    PRINT("<tr><td colspan=\"2\">\n\tsize: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"2\">\n\tcapacity: %lld\n</td></tr>\n",
+    PRINT("<tr><td colspan=\"2\">\n\tsize: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"2\">\n\tcapacity: %ld\n</td></tr>\n",
           tok_table->size, tok_table->cap);
 
     PRINT("<tr><th>name</th><th>pointer</th></tr>\n");

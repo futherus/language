@@ -3,16 +3,16 @@
 #include <assert.h>
 
 #include "transpiler.h"
-#include "../dumpsystem/dumpsystem.h"
+#include "../common/dumpsystem.h"
 
 static FILE* OSTREAM = nullptr;
 
-static generator_err IS_ERROR = GENERATOR_NOERR;
+static degenerator_err IS_ERROR = DEGENERATOR_NOERR;
 
 #define semantic_error(MSG_, TOK_)                                                      \
 do                                                                                      \
 {                                                                                       \
-    IS_ERROR = GENERATOR_SEMANTIC_ERROR;                                                \
+    IS_ERROR = DEGENERATOR_SEMANTIC_ERROR;                                                \
     fprintf(stderr, "\x1b[31mSemantic error:\x1b[0m %s : %s\n", (MSG_), std_demangle(TOK_));\
     FILE* stream_ = dumpsystem_get_opened_stream();                                     \
                                                                                         \
@@ -23,14 +23,14 @@ do                                                                              
                          (MSG_), std_demangle(TOK_),                                    \
                          __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
                                                                                         \
-        return GENERATOR_PASS_ERROR;                                                         \
+        return DEGENERATOR_PASS_ERROR;                                                         \
     }                                                                                   \
 } while(0)                                                                              \
 
 #define format_error(MSG_, TOK_)                                                        \
 do                                                                                      \
 {                                                                                       \
-    IS_ERROR = GENERATOR_FORMAT_ERROR;                                                  \
+    IS_ERROR = DEGENERATOR_FORMAT_ERROR;                                                  \
     fprintf(stderr, "\x1b[31mFormat error:\x1b[0m %s : %s\n", (MSG_), std_demangle(TOK_));  \
     FILE* stream_ = dumpsystem_get_opened_stream();                                     \
                                                                                         \
@@ -41,7 +41,7 @@ do                                                                              
                          (MSG_), std_demangle(TOK_),                                        \
                          __FILE__, __LINE__, __PRETTY_FUNCTION__);                      \
                                                                                         \
-        return GENERATOR_NOERR;                                                         \
+        return DEGENERATOR_NOERR;                                                         \
     }                                                                                   \
 } while(0)                                                                              \
 
@@ -52,10 +52,10 @@ static int INDENTATION = 0;
 #define print_tab(fmt, ...) fprintf(OSTREAM, "%*s" fmt, INDENTATION * 4, "", ##__VA_ARGS__)
 #define print(fmt, ...)     fprintf(OSTREAM, fmt, ##__VA_ARGS__)
 
-static generator_err expression(Node* node);
-static generator_err statement(Node* node);
+static degenerator_err expression(Node* node);
+static degenerator_err statement(Node* node);
 
-static generator_err number(Node* node)
+static degenerator_err number(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_NUMBER);
@@ -65,10 +65,10 @@ static generator_err number(Node* node)
 
     print("%lg", node->tok.val.num);
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err variable(Node* node)
+static degenerator_err variable(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_ID);
@@ -91,15 +91,15 @@ static generator_err variable(Node* node)
         tok.val.op = TOK_SHIFT;
         print(" %s (", demangle(&tok));
 
-        PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
         
         print(")");
     }
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err embedded(Node* node)
+static degenerator_err embedded(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_EMBED);
@@ -113,7 +113,7 @@ static generator_err embedded(Node* node)
 
             print("%s(", demangle(&node->tok));
 
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+            PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
             print(")");
             break;
@@ -140,7 +140,7 @@ static generator_err embedded(Node* node)
         
             print(", ");
 
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+            PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
             print(")");
             break;
@@ -151,17 +151,17 @@ static generator_err embedded(Node* node)
         }
     }
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
     
-static generator_err call_parameter(Node* node)
+static degenerator_err call_parameter(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_PARAMETER);
 
     if(node->left)
     {
-        PASS$(!call_parameter(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!call_parameter(node->left), return DEGENERATOR_PASS_ERROR; );
 
         Token tok = {.type = TYPE_OP};
         tok.val.op = TOK_COMMA;
@@ -171,12 +171,12 @@ static generator_err call_parameter(Node* node)
     if(!node->right)
         format_error("Missing argument", &node->right->tok);
     
-    PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err call(Node* node)
+static degenerator_err call(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_CALL);
@@ -186,11 +186,11 @@ static generator_err call(Node* node)
     
     print("%s(", demangle(&node->left->tok));
     if(node->right)
-        PASS$(!call_parameter(node->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!call_parameter(node->right), return DEGENERATOR_PASS_ERROR; );
     
     print(")");
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
 static ptrdiff_t get_priority(Token* tok)
@@ -225,32 +225,32 @@ static ptrdiff_t get_priority(Token* tok)
     }
 }
 
-static generator_err expression(Node* node)
+static degenerator_err expression(Node* node)
 {
     assert(node);
 
     if(node->tok.type == TYPE_NUMBER)
     {
-        PASS$(!number(node), return GENERATOR_PASS_ERROR; );
-        return GENERATOR_NOERR;
+        PASS$(!number(node), return DEGENERATOR_PASS_ERROR; );
+        return DEGENERATOR_NOERR;
     }
     
     if(node->tok.type == TYPE_ID)
     {
-        PASS$(!variable(node), return GENERATOR_PASS_ERROR; );
-        return GENERATOR_NOERR;
+        PASS$(!variable(node), return DEGENERATOR_PASS_ERROR; );
+        return DEGENERATOR_NOERR;
     }
 
     if(node->tok.type == TYPE_EMBED)
     {
-        PASS$(!embedded(node), return GENERATOR_PASS_ERROR; );
-        return GENERATOR_NOERR;
+        PASS$(!embedded(node), return DEGENERATOR_PASS_ERROR; );
+        return DEGENERATOR_NOERR;
     }
 
     if(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_CALL)
     {
-        PASS$(!call(node), return GENERATOR_PASS_ERROR; );
-        return GENERATOR_NOERR;
+        PASS$(!call(node), return DEGENERATOR_PASS_ERROR; );
+        return DEGENERATOR_NOERR;
     }
 
     if(node->tok.type != TYPE_OP)
@@ -265,7 +265,7 @@ static generator_err expression(Node* node)
         if(op_priority >= priority)
             print("(");
 
-        PASS$(!expression(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!expression(node->left), return DEGENERATOR_PASS_ERROR; );
     
         if(op_priority >= priority)
             print(")");
@@ -279,16 +279,16 @@ static generator_err expression(Node* node)
         if(op_priority >= priority)
             print("(");
 
-        PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
     
         if(op_priority >= priority)
             print(")");
     }
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err conditional(Node* node)
+static degenerator_err conditional(Node* node)
 {
     assert(node);
     if(!node->left || !node->right || node->right->tok.type != TYPE_AUX || node->right->tok.val.aux != TOK_DECISION)
@@ -296,7 +296,7 @@ static generator_err conditional(Node* node)
 
     print_tab("%s(", demangle(&node->tok));
 
-    PASS$(!expression(node->left), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->left), return DEGENERATOR_PASS_ERROR; );
     print(")\n");
 
     Token tok = {.type = TYPE_OP};
@@ -307,7 +307,7 @@ static generator_err conditional(Node* node)
     if(!node->right->left)
         semantic_error("Conditional statement missing positive branch (no body statements)", &node->tok);
 
-    PASS$(!statement(node->right->left), return GENERATOR_PASS_ERROR; );
+    PASS$(!statement(node->right->left), return DEGENERATOR_PASS_ERROR; );
 
     INDENTATION--;
     tok = {.type = TYPE_OP};
@@ -317,7 +317,7 @@ static generator_err conditional(Node* node)
     if(!node->right->right)
     {
         print("\n");
-        return GENERATOR_NOERR;
+        return DEGENERATOR_NOERR;
     }
 
     tok.type    = TYPE_KEYWORD;
@@ -329,17 +329,17 @@ static generator_err conditional(Node* node)
     print_tab("%s\n", demangle(&tok));
     INDENTATION++;
 
-    PASS$(!statement(node->right->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!statement(node->right->right), return DEGENERATOR_PASS_ERROR; );
 
     INDENTATION--;
     tok = {.type = TYPE_OP};
     tok.val.op = TOK_RFPAR;
     print_tab("%s\n\n", demangle(&tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err cycle(Node* node)
+static degenerator_err cycle(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_WHILE);
@@ -350,7 +350,7 @@ static generator_err cycle(Node* node)
     print("\n");
     print_tab("%s(", demangle(&node->tok));
 
-    PASS$(!expression(node->left), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->left), return DEGENERATOR_PASS_ERROR; );
 
     print(")\n");
 
@@ -359,17 +359,17 @@ static generator_err cycle(Node* node)
     print_tab("%s\n", demangle(&tok));
     INDENTATION++;
 
-    PASS$(!statement(node->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!statement(node->right), return DEGENERATOR_PASS_ERROR; );
 
     INDENTATION--;
     tok = {.type = TYPE_OP};
     tok.val.op = TOK_RFPAR;
     print_tab("%s\n", demangle(&tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err terminational(Node* node)
+static degenerator_err terminational(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_KEYWORD && node->tok.val.key == TOK_RETURN);
@@ -378,16 +378,16 @@ static generator_err terminational(Node* node)
         format_error("Terminational statement missing or wrong descendant", &node->tok);
 
     print_tab("%s ", demangle(&node->tok));
-    PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
     Token tok = {.type = TYPE_OP};
     tok.val.op = TOK_SEMICOLON;
     print(" %s\n", demangle(&tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err assignment(Node* node)
+static degenerator_err assignment(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_OP && node->tok.val.op == TOK_ASSIGN);
@@ -418,7 +418,7 @@ static generator_err assignment(Node* node)
         tok.val.op = TOK_LQPAR;
         print("%s", demangle(&tok));
 
-        PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!expression(node->left->right), return DEGENERATOR_PASS_ERROR; );
 
         tok = {.type = TYPE_OP};
         tok.val.op = TOK_RQPAR;
@@ -427,16 +427,16 @@ static generator_err assignment(Node* node)
 
     print(" %s ", demangle(&node->tok));
 
-    PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
     tok = {.type = TYPE_OP};
     tok.val.op = TOK_SEMICOLON;
     print(" %s\n", demangle(&tok));
     
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err statement(Node* node)
+static degenerator_err statement(Node* node)
 {
     assert(node);
 
@@ -444,44 +444,44 @@ static generator_err statement(Node* node)
         format_error("'statement' expected", &node->tok);
 
     if(node->left)
-        PASS$(!statement(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!statement(node->left), return DEGENERATOR_PASS_ERROR; );
 
     if(node->right->tok.type == TYPE_KEYWORD)
     {
         if(node->right->tok.val.key == TOK_IF)
         {
-            PASS$(!conditional(node->right), return GENERATOR_PASS_ERROR; );
-            return GENERATOR_NOERR;
+            PASS$(!conditional(node->right), return DEGENERATOR_PASS_ERROR; );
+            return DEGENERATOR_NOERR;
         }
         else if(node->right->tok.val.key == TOK_WHILE)
         {
-            PASS$(!cycle(node->right), return GENERATOR_PASS_ERROR; );
-            return GENERATOR_NOERR;
+            PASS$(!cycle(node->right), return DEGENERATOR_PASS_ERROR; );
+            return DEGENERATOR_NOERR;
         }
         else if(node->right->tok.val.key == TOK_RETURN)
         {
-            PASS$(!terminational(node->right), return GENERATOR_PASS_ERROR; );
-            return GENERATOR_NOERR;
+            PASS$(!terminational(node->right), return DEGENERATOR_PASS_ERROR; );
+            return DEGENERATOR_NOERR;
         }
     }
 
     if(node->right->tok.type == TYPE_OP && node->right->tok.val.op == TOK_ASSIGN)
     {
-        PASS$(!assignment(node->right), return GENERATOR_PASS_ERROR; );
-        return GENERATOR_NOERR;
+        PASS$(!assignment(node->right), return DEGENERATOR_PASS_ERROR; );
+        return DEGENERATOR_NOERR;
     }
 
     print_tab("");
-    PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
+    PASS$(!expression(node->right), return DEGENERATOR_PASS_ERROR; );
 
     Token tok = {.type = TYPE_OP};
     tok.val.op = TOK_SEMICOLON;
     print(" %s\n", demangle(&tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err parameter(Node* node)
+static degenerator_err parameter(Node* node)
 {
     assert(node);
     
@@ -490,7 +490,7 @@ static generator_err parameter(Node* node)
 
     if(node->left)
     {
-        PASS$(!parameter(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!parameter(node->left), return DEGENERATOR_PASS_ERROR; );
 
         Token tok = {.type = TYPE_OP};
         tok.val.op = TOK_COMMA;
@@ -513,10 +513,10 @@ static generator_err parameter(Node* node)
 
     print("%s", demangle(&node->right->tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err function(Node* node)
+static degenerator_err function(Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_DEFINE);
@@ -526,7 +526,7 @@ static generator_err function(Node* node)
 
     Node* param = node->left->right;
     if(param)
-        PASS$(!parameter(param), return GENERATOR_PASS_ERROR; );
+        PASS$(!parameter(param), return DEGENERATOR_PASS_ERROR; );
 
     print(")\n");
 
@@ -537,7 +537,7 @@ static generator_err function(Node* node)
 
     Node* stmnt = node->right;
     if(stmnt)
-        PASS$(!statement(stmnt), return GENERATOR_PASS_ERROR; );
+        PASS$(!statement(stmnt), return DEGENERATOR_PASS_ERROR; );
 
     if(stmnt->right->tok.type != TYPE_KEYWORD || stmnt->right->tok.val.key != TOK_RETURN)
         semantic_error("Missing terminational", &node->right->left->left->tok);
@@ -547,15 +547,15 @@ static generator_err function(Node* node)
     tok.val.op = TOK_RFPAR;
     print_tab("%s\n", demangle(&tok));
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-static generator_err generate_first_line(Node* node)
+static degenerator_err generate_first_line(Node* node)
 {
     assert(node);
     
     if(node->left)
-        PASS$(!generate_first_line(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!generate_first_line(node->left), return DEGENERATOR_PASS_ERROR; );
 
     if(node->tok.type != TYPE_AUX || node->tok.val.aux != TOK_STATEMENT)
         format_error("'statement' expected (first line)", &node->tok);
@@ -565,27 +565,27 @@ static generator_err generate_first_line(Node* node)
 
     if(node->right->tok.type == TYPE_OP && node->right->tok.val.op == TOK_ASSIGN)
     {
-        PASS$(!assignment(node->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!assignment(node->right), return DEGENERATOR_PASS_ERROR; );
     }
     else if(node->right->tok.type == TYPE_AUX && node->right->tok.val.aux == TOK_DEFINE)
     {
-        PASS$(!function(node->right), return GENERATOR_PASS_ERROR; );
+        PASS$(!function(node->right), return DEGENERATOR_PASS_ERROR; );
     }
     else
     {
         format_error("Assignment or function definition expected (first line)", &node->right->tok);
     }
 
-    return GENERATOR_NOERR;
+    return DEGENERATOR_NOERR;
 }
 
-generator_err generator(Tree* tree, FILE* ostream)
+degenerator_err degenerator(Tree* tree, FILE* ostream)
 {
     assert(ostream && tree);
 
     OSTREAM = ostream;
 
-    PASS$(!generate_first_line(tree->root), return GENERATOR_PASS_ERROR; );
+    PASS$(!generate_first_line(tree->root), return DEGENERATOR_PASS_ERROR; );
 
     OSTREAM = nullptr;
 

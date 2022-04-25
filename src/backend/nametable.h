@@ -1,11 +1,11 @@
 #ifndef NAMETABLE_H
 #define NAMETABLE_H
 
-#include "../generator.h"
+#include "generator.h"
 
 struct Variable 
 {
-    char* id = nullptr;
+    const char* id = nullptr;
     ptrdiff_t offset = 0;
     ptrdiff_t size   = 0;
     bool is_const = false;
@@ -13,7 +13,7 @@ struct Variable
 
 struct Function
 {
-    char* id = nullptr;
+    const char* id = nullptr;
     ptrdiff_t n_args = 0;
 };
 

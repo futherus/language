@@ -1,0 +1,3 @@
+[submodule "include/Processor"]
+	path = include/Processor
+	url = git@github.com:futherus/Processor.git

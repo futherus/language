@@ -3,13 +3,13 @@
 
 #include "../tree/Tree.h"
 
-enum generator_err
+enum degenerator_err
 {
-    GENERATOR_NOERR = 0,
-    GENERATOR_PASS_ERROR = 1,
-    GENERATOR_SEMANTIC_ERROR = 2,
-    GENERATOR_FORMAT_ERROR = 3,
-    GENERATOR_BAD_ALLOC = 4,
+    DEGENERATOR_NOERR = 0,
+    DEGENERATOR_PASS_ERROR = 1,
+    DEGENERATOR_SEMANTIC_ERROR = 2,
+    DEGENERATOR_FORMAT_ERROR = 3,
+    DEGENERATOR_BAD_ALLOC = 4,
 };
 
 enum transpiler_err
@@ -20,9 +20,9 @@ enum transpiler_err
     TRANSP_READ_FAIL      = 3,
     TRANSP_INFILE_FAIL    = 4,
     TRANSP_BAD_ALLOC      = 5,
-    TRANSP_GENERATOR_FAIL = 6,
+    TRANSP_DEGENERATOR_FAIL = 6,
 };
 
-generator_err generator(Tree* tree, FILE* ostream);
+degenerator_err degenerator(Tree* tree, FILE* ostream);
 
 #endif // TRANSPILER_H

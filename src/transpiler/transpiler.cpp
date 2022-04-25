@@ -3,9 +3,9 @@
 #include <sys/stat.h>
 
 #include "transpiler.h"
-#include "../dumpsystem/dumpsystem.h"
-#include "../jumps.h"
-#include "../args/args.h"
+#include "../common/dumpsystem.h"
+#include "../common/jumps.h"
+#include "../common/args.h"
 
 static int get_file_sz_(const char filename[], size_t* sz)
 {
@@ -46,31 +46,33 @@ int main(int argc, char* argv[])
 
 TRY__
     ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
-                                                            TRANSP_INFILE_FAIL,    FAIL__);
+                                                          TRANSP_INFILE_FAIL,      FAIL__);
 
-    data = (char*) calloc(file_sz, sizeof(char));
-    ASSERT$(data,                                           TRANSP_BAD_ALLOC,      FAIL__);
+    data = (char*) calloc(file_sz + 1, sizeof(char));
+    ASSERT$(data,                                         TRANSP_BAD_ALLOC,        FAIL__);
 
     istream = fopen(infile_name, "r");
-    ASSERT$(istream,                                        TRANSP_INFILE_FAIL,    FAIL__);
+    ASSERT$(istream,                                      TRANSP_INFILE_FAIL,      FAIL__);
 
     file_sz = fread(data, sizeof(char), file_sz, istream);
-    ASSERT$(!ferror(istream),                               TRANSP_READ_FAIL,      FAIL__);
+    ASSERT$(!ferror(istream),                             TRANSP_READ_FAIL,        FAIL__);
 
     fclose(istream);
     istream = nullptr;
 
-    data = (char*) realloc(data, file_sz * sizeof(char));
-    ASSERT$(data,                                           TRANSP_BAD_ALLOC,      FAIL__);
+    data = (char*) realloc(data, (file_sz + 1) * sizeof(char));
+    ASSERT$(data,                                         TRANSP_BAD_ALLOC,        FAIL__);
+    data[file_sz] = 0; // null-termination of buffer
 
-    ASSERT$(!tree_read(&tree, &tok_table, data, file_sz),   TRANSP_FORMAT_ERROR,   FAIL__);
+    ASSERT$(!tree_read(&tree, &tok_table, data, (ptrdiff_t) file_sz),
+                                                          TRANSP_FORMAT_ERROR,     FAIL__);
     tree_dump(&tree, "Dump");
     token_nametable_dump(&tok_table);
 
     ostream = fopen(outfile_name, "w");
-    ASSERT$(ostream,                                        TRANSP_INFILE_FAIL,    FAIL__);
+    ASSERT$(ostream,                                      TRANSP_INFILE_FAIL,      FAIL__);
 
-    ASSERT$(!generator(&tree, ostream),                     TRANSP_GENERATOR_FAIL, FAIL__);
+    ASSERT$(!degenerator(&tree, ostream),                 TRANSP_DEGENERATOR_FAIL, FAIL__);
 
     fclose(ostream);
     ostream = nullptr;

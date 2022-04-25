@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "args.h"
-#include "assert.h"
 
 args_msg process_args(int argc, char* argv[], char infile_name[], char outfile_name[])
 {

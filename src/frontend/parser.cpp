@@ -1,8 +1,8 @@
 #include <assert.h>
 
 #include "parser.h"
-#include "../lexer/lexer.h"
-#include "../../dumpsystem/dumpsystem.h"
+#include "lexer.h"
+#include "../common/dumpsystem.h"
 
 static Tree*        TREE_        = nullptr;
 static Token_array* TOKEN_ARRAY_ = nullptr;
@@ -464,7 +464,7 @@ static parser_err conditional(Node** base)
         syntax_error("Opening parenthesis expected (body of positive)",&tok);
     
     PEEK(&tok, 0);
-    while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
+    while(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
     {
         Node* tmp = (*base)->left;
         MK_AUX(&(*base)->left, TOK_STATEMENT);
@@ -534,7 +534,7 @@ static parser_err cycle(Node** base)
     base = &(*base)->right;
 
     PEEK(&tok, 0);
-    while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
+    while(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
     {
         Node* tmp = (*base);
         MK_AUX(base, TOK_STATEMENT);

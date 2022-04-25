@@ -29,10 +29,11 @@ static tree_err ptr_arr_resize_(Tree* tree)
     if(new_cap == 0)
         new_cap = TREE_PTR_ARR_MIN_CAP;
 
-    Node** temp = (Node**) realloc(tree->ptr_arr, new_cap * sizeof(Node*));
+    Node** temp = (Node**) realloc(tree->ptr_arr, (size_t) new_cap * sizeof(Node*));
     ASSERT(temp, TREE_BAD_ALLOC);
     
-    memset(temp + tree->ptr_arr_cap, 0, new_cap - tree->ptr_arr_cap);
+    assert(new_cap >= tree->ptr_arr_cap);
+    memset(temp + tree->ptr_arr_cap, 0, (size_t) (new_cap - tree->ptr_arr_cap));
 
     tree->ptr_arr     = temp;
     tree->ptr_arr_cap = new_cap;
@@ -62,6 +63,8 @@ tree_err tree_dstr(Tree* tree)
 
     for(ptrdiff_t iter = 0; iter < tree->cap / TREE_CHUNK_SIZE; iter++)
         free(tree->ptr_arr[iter]);
+    
+    free(tree->ptr_arr);
     
     return TREE_NOERR;
 }
@@ -107,7 +110,7 @@ tree_err tree_copy(Tree* tree, Node** base_ptr, Node* origin)
 }
 
 static void (*VISITOR_FUNCTION_)(Node*, size_t depth) = nullptr;
-static size_t VISITOR_DEPTH_ = -1;
+static size_t VISITOR_DEPTH_ = (size_t) -1;
 
 static void tree_visitor_(Node* node)
 {
@@ -132,7 +135,7 @@ tree_err tree_visitor(Tree* tree, void (*function)(Node* node, size_t depth))
     assert(tree->root);
 
     VISITOR_FUNCTION_ = function;
-    VISITOR_DEPTH_    = -1;
+    VISITOR_DEPTH_    = (size_t) -1;
 
     tree_visitor_(tree->root);
 

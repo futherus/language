@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../token/Token.h"
+#include "../token/Token.h"
 
 enum lexer_err
 {

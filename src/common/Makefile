@@ -42,8 +42,8 @@ CXXFLAGS ?= 	   -O2 -g --static-pie -std=c++14 -fmax-errors=100 -Wall -Wextra   
     			   -fsanitize=vptr                                                 				\
     			   -lm -pie 					 
 
-SRC 	:= degenerator.cpp transpiler.cpp
-OUT 	:= transpiler.o
+SRC 	:= args.cpp dumpsystem.cpp
+OUT 	:= common.o
 
 # temporary object files
 OBJ 	:= $(addprefix $(OBJDIR)/, $(SRC:.cpp=.tmp.o))

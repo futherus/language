@@ -42,8 +42,8 @@ CXXFLAGS ?= 	   -O2 -g --static-pie -std=c++14 -fmax-errors=100 -Wall -Wextra   
     			   -fsanitize=vptr                                                 				\
     			   -lm -pie 					 
 
-SRC 	:= degenerator.cpp transpiler.cpp
-OUT 	:= transpiler.o
+SRC 	:= Tree_dump.cpp Tree_read.cpp Tree_write.cpp Tree.cpp
+OUT 	:= Tree.o
 
 # temporary object files
 OBJ 	:= $(addprefix $(OBJDIR)/, $(SRC:.cpp=.tmp.o))
@@ -53,7 +53,7 @@ all: $(OUT)
 
 $(OUT): $(OBJ) | $(OBJDIR)
 	ld -r $(OBJ) -o $(OUT)
-	
+
 
 $(OBJDIR)/%.tmp.o : %.cpp
 	@ echo ======== Compiling $(notdir $@) ========

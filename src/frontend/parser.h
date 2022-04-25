@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "../../tree/Tree.h"
+#include "../tree/Tree.h"
 
 enum parser_err
 {

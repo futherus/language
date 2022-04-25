@@ -17,8 +17,8 @@ void vartable_dump(Variable_table* table)
     PRINT("\n\n<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n"
           "<tr><th colspan=\"4\" class = \"title\">Variable table</th></tr>\n");
         
-    PRINT("<tr><td colspan=\"4\">\n\tsize: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"4\">\n\tcapacity: %lld\n</td></tr>\n",
+    PRINT("<tr><td colspan=\"4\">\n\tsize: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"4\">\n\tcapacity: %ld\n</td></tr>\n",
           table->size, table->cap);
     
     PRINT("<tr><th>id</th><th>offset</th><th>size</th></tr>\n");
@@ -39,7 +39,7 @@ void vartable_dump(Variable_table* table)
         else
             PRINT("<tr style = \"height: 40px;\">\n");
 
-        PRINT("<td>  %s  </td>\n<td>  %lld  </td>\n<td>  %lld  </td>\n", ptr->id, ptr->offset, ptr->size);
+        PRINT("<td>  %s  </td>\n<td>  %ld  </td>\n<td>  %ld  </td>\n", ptr->id, ptr->offset, ptr->size);
 
         PRINT("</tr>\n");
     }
@@ -57,8 +57,8 @@ void functable_dump(Function_table* table)
     PRINT("\n\n<table class = \"log\" border=\"1\" style=\"border-collapse:collapse; border-color:E59E1F; border-width: 1px; width: 600px;\"><tbody>\n"
           "<tr><th colspan=\"2\" class = \"title\">Function table</th></tr>\n");
         
-    PRINT("<tr><td colspan=\"2\">\n\tsize: %lld\n</td></tr>\n"
-          "<tr><td colspan=\"2\">\n\tcapacity: %lld\n</td></tr>\n",
+    PRINT("<tr><td colspan=\"2\">\n\tsize: %ld\n</td></tr>\n"
+          "<tr><td colspan=\"2\">\n\tcapacity: %ld\n</td></tr>\n",
           table->size, table->cap);
     
     PRINT("<tr><th>id</th><th>n_args</th></tr>\n");
@@ -76,7 +76,7 @@ void functable_dump(Function_table* table)
 
         PRINT("<tr style = \"height: 40px;\">\n");
 
-        PRINT("<td>  %s  </td>\n<td>  %lld  </td>\n", ptr->id, ptr->n_args);
+        PRINT("<td>  %s  </td>\n<td>  %ld  </td>\n", ptr->id, ptr->n_args);
 
         PRINT("</tr>\n");
     }

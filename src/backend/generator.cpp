@@ -3,8 +3,8 @@
 #include <assert.h>
 
 #include "generator.h"
-#include "nametable/nametable.h"
-#include "../dumpsystem/dumpsystem.h"
+#include "nametable.h"
+#include "../common/dumpsystem.h"
 #include "hash.h"
 #include "../reserved_names.h"
 
@@ -106,11 +106,11 @@ static generator_err variable(Node* node)
 
     if((var = vartable_find(GLOBALS, node->tok.val.name)) != nullptr)
     {
-        print("rcx + %lld]\n", var->offset);
+        print("rcx + %ld]\n", var->offset);
     }
     else if((var = vartable_find(LOCALS, node->tok.val.name)) != nullptr)
     {
-        print("rbx + %lld]\n", var->offset);
+        print("rbx + %ld]\n", var->offset);
     }
     else
     {
@@ -196,11 +196,11 @@ static generator_err embedded(Node* node)
 
             if((var = vartable_find(GLOBALS, node->left->tok.val.name)) != nullptr)
             {
-                print("rcx + %lld\n", var->offset);
+                print("rcx + %ld\n", var->offset);
             }
             else if((var = vartable_find(LOCALS, node->left->tok.val.name)) != nullptr)
             {
-                print("rbx + %lld\n", var->offset);
+                print("rbx + %ld\n", var->offset);
             }
             else
             {
@@ -308,10 +308,10 @@ static generator_err call_parameter(Node* node, ptrdiff_t n_args)
     
     PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
 
-    print_tab("pop [rbx + %lld]\n", vartable_end(LOCALS));
+    print_tab("pop [rbx + %ld]\n", vartable_end(LOCALS));
 
     Variable call_var = {};
-    call_var.id = (char*) CALL_VARIABLE;
+    call_var.id = CALL_VARIABLE;
     PASS$(!vartable_add(LOCALS, call_var), return GENERATOR_PASS_ERROR; );
 
     return GENERATOR_NOERR;
@@ -346,22 +346,20 @@ static generator_err call(Node* node)
     INDENTATION--;
 
     print_tab("push rbx\n");
-    print_tab("push %lld\n", call_offset);
+    print_tab("push %ld\n", call_offset);
     print_tab("add\n");
     print_tab("pop rbx\n");
 
     char* func_name = node->left->tok.val.name;
-    print_tab("call func__%llx\n", fnv1_64(func_name, strlen(func_name)));
+    print_tab("call func__%lx\n", fnv1_64(func_name, strlen(func_name)));
 
     print_tab("push rbx\n");
-    print_tab("push %lld\n", call_offset);
+    print_tab("push %ld\n", call_offset);
     print_tab("sub\n");
     print_tab("pop rbx\n");
 
     print_tab("push rax\n\n");
 
-    MSG$("Function call %s", node->left->tok.val.name);
-    vartable_dump(LOCALS);
     LOCALS->size -= func->n_args;
 
     return GENERATOR_NOERR;
@@ -546,9 +544,9 @@ static generator_err assignment(Node* node, Variable_table* vartable)
         PASS$(!vartable_add(vartable, var), return GENERATOR_PASS_ERROR; );
 
         if(vartable == LOCALS)
-            print_tab("pop [rbx + %lld]\n", var.offset + shift);
+            print_tab("pop [rbx + %ld]\n", var.offset + shift);
         else if(vartable == GLOBALS)
-            print_tab("pop [rcx + %lld]\n", var.offset + shift);
+            print_tab("pop [rcx + %ld]\n", var.offset + shift);
         
         return GENERATOR_NOERR;
     }
@@ -573,11 +571,11 @@ static generator_err assignment(Node* node, Variable_table* vartable)
 
     if(is_global)
     {
-        print("rcx + %lld]\n", ptr->offset);
+        print("rcx + %ld]\n", ptr->offset);
     }
     else
     {
-        print("rbx + %lld]\n", ptr->offset);
+        print("rbx + %ld]\n", ptr->offset);
     }
 
     return GENERATOR_NOERR;
@@ -752,7 +750,7 @@ static generator_err generate_funcs(Node* node)
         return GENERATOR_NOERR;
     
     char* func_name = node->right->left->left->tok.val.name;
-    print("\n\n\nfunc__%llx:\n", fnv1_64(func_name, strlen(func_name)));
+    print("\n\n\nfunc__%lx:\n", fnv1_64(func_name, strlen(func_name)));
 
     INDENTATION++;
 
@@ -767,7 +765,7 @@ static generator_err generate_funcs(Node* node)
     if(stmnt->right->tok.type != TYPE_KEYWORD || stmnt->right->tok.val.key != TOK_RETURN)
         semantic_error("Missing terminational", &node->right->left->left->tok);
 
-    MSG$("End of function %s", node->right->left->left->tok.val.name);
+    MSG$("Function `%s` variables:", node->right->left->left->tok.val.name);
     vartable_dump(LOCALS);
     LOCALS->size = 0;
 
@@ -792,20 +790,22 @@ generator_err generator(Tree* tree, FILE* ostream)
     FUNCS   = &funcs;
 
     PASS$(!fill_funcs_table(tree->root), return GENERATOR_PASS_ERROR; );
+    MSG$("Functions:");
     functable_dump(&funcs);
 
-    print_tab("push %lld\n"
+    print_tab("push %ld\n"
               "pop rcx\n",
                MEMORY_GLOBAL);
 
     PASS$(!generate_globals(tree->root), return GENERATOR_PASS_ERROR; );
+    MSG$("Global variables:");
     vartable_dump(&globals);
 
-    print_tab("push %lld\n"
+    print_tab("push %ld\n"
               "pop rbx\n",
               vartable_end(&globals));
 
-    print_tab("call func__%llx\n", fnv1_64(MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1));
+    print_tab("call func__%lx\n", fnv1_64(MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1));
 
     print_tab("hlt\n");
 

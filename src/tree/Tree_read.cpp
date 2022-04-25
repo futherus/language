@@ -4,14 +4,16 @@
 #include <ctype.h>
 
 #include "Tree.h"
-#include "../dumpsystem/dumpsystem.h"
+#include "../common/dumpsystem.h"
 
-static void clean_whitespaces_(const char data[], ptrdiff_t* pos)
+static ptrdiff_t clean_whitespaces_(const char data[], ptrdiff_t pos)
 {
-    assert(data && pos);
+    assert(data);
 
-    while(isspace(data[*pos]))
-        (*pos)++;
+    while(isspace(data[pos]))
+        pos++;
+    
+    return pos;
 }
 
 static bool get_number(const char data[], double* num, int* n_read)
@@ -49,7 +51,7 @@ static void wordlen_(const char data[], int* n_read)
     {                                                               \
         tmp.type = TYPE_KEYWORD;                                    \
         tmp.val.key = TOK_##MANGLE;                                 \
-        pos += sizeof(STD_NAME) - 1;                                \
+        pos += (ptrdiff_t) sizeof(STD_NAME) - 1;                                \
         PASS$(!token_array_add(tok_arr, &tmp), return TOKEN_BAD_ALLOC; ); \
         continue;                                           \
     }                                                       \
@@ -59,7 +61,7 @@ static void wordlen_(const char data[], int* n_read)
     {                                                       \
         tmp.type = TYPE_OP;                                 \
         tmp.val.op = TOK_##MANGLE;                          \
-        pos += sizeof(STD_NAME) - 1;                            \
+        pos += (ptrdiff_t) sizeof(STD_NAME) - 1;                            \
         PASS$(!token_array_add(tok_arr, &tmp), return TOKEN_BAD_ALLOC; ); \
         continue;                                           \
     }                                                       \
@@ -69,7 +71,7 @@ static void wordlen_(const char data[], int* n_read)
     {                                                       \
         tmp.type = TYPE_EMBED;                              \
         tmp.val.emb = TOK_##MANGLE;                         \
-        pos += sizeof(STD_NAME) - 1;                            \
+        pos += (ptrdiff_t) sizeof(STD_NAME) - 1;                            \
         PASS$(!token_array_add(tok_arr, &tmp), return TOKEN_BAD_ALLOC; ); \
         continue;                                           \
     }                                                       \
@@ -79,7 +81,7 @@ static void wordlen_(const char data[], int* n_read)
     {                                                                     \
         tmp.type = TYPE_AUX;                                              \
         tmp.val.aux = TOK_##MANGLE;                                       \
-        pos += sizeof(STD_NAME) - 1;                                      \
+        pos += (ptrdiff_t) sizeof(STD_NAME) - 1;                                      \
         PASS$(!token_array_add(tok_arr, &tmp), return TOKEN_BAD_ALLOC; ); \
         continue;                                                         \
     }                                                                     \
@@ -94,7 +96,7 @@ static token_err lexer_(Token_array* tok_arr, Token_nametable* tok_table, const 
 
     while(true)
     {
-        clean_whitespaces_(data, &pos);   
+        pos = clean_whitespaces_(data, pos);   
         if(pos == data_sz)
             break;
         
@@ -213,11 +215,7 @@ tree_err tree_read(Tree* tree, Token_nametable* tok_table, const char data[], pt
     }
 
     tree_err tree_error = read_node_(&tree->root, tree, &tok_arr);
-    if(tree_error)
-    {
-        token_array_dump(&tok_arr);
-        tree_dump(tree, "Dump");
-    }
+    tree_dump(tree, "Dump");
 
     token_array_dstr(&tok_arr);
 

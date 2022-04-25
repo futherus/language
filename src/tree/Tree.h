@@ -27,10 +27,6 @@ struct Tree
     ptrdiff_t cap  = 0;
 
     Node*     root = nullptr;
-
-    char**    id_arr     = nullptr;
-    ptrdiff_t id_arr_sz  = 0;
-    ptrdiff_t id_arr_cap = 0;
 };
 
 enum tree_err

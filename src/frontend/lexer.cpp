@@ -4,8 +4,8 @@
 #include <ctype.h>
 
 #include "lexer.h"
-#include "../../dumpsystem/dumpsystem.h"
-#include "../../reserved_names.h"
+#include "../common/dumpsystem.h"
+#include "../reserved_names.h"
 
 static void clean_whitespaces_(const char data[], ptrdiff_t* pos)
 {
@@ -62,7 +62,7 @@ do                                                                              
         {                                                       \
             tmp.type = TYPE_KEYWORD;                            \
             tmp.val.key = TOK_##MANGLE;                         \
-            pos += sizeof(NAME) - 1;                            \
+            pos += (ptrdiff_t) sizeof(NAME) - 1;                            \
             PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; ); \
             continue;                                           \
         }                                                       \
@@ -75,7 +75,7 @@ do                                                                              
         {                                                       \
             tmp.type = TYPE_OP;                                 \
             tmp.val.op = TOK_##MANGLE;                          \
-            pos += sizeof(NAME) - 1;                            \
+            pos += (ptrdiff_t) sizeof(NAME) - 1;                            \
             PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; ); \
             continue;                                           \
         }                                                       \
@@ -88,7 +88,7 @@ do                                                                              
         {                                                       \
             tmp.type = TYPE_EMBED;                              \
             tmp.val.emb = TOK_##MANGLE;                         \
-            pos += sizeof(NAME) - 1;                            \
+            pos += (ptrdiff_t) sizeof(NAME) - 1;                            \
             PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; ); \
             continue;                                           \
         }                                                       \
@@ -138,14 +138,14 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
         if(data[pos] == COMMENT_END)
             lexer_err("Comment termination without comment start", data + pos);
 
-        #include "../../reserved_operators.inc"
-        #include "../../reserved_keywords.inc"
-        #include "../../reserved_embedded.inc"
+        #include "../reserved_operators.inc"
+        #include "../reserved_keywords.inc"
+        #include "../reserved_embedded.inc"
 
         if(!n_read)
             lexer_err("Unknown symbol", data + pos);
 
-        if(strncmp(MAIN_NAME, data + pos, n_read) == 0)
+        if(strncmp(MAIN_NAME, data + pos, (size_t) n_read) == 0)
             PASS$(!token_nametable_add(tok_table, &tmp.val.name, MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1), return LEXER_BAD_ALLOC; );
         else
             PASS$(!token_nametable_add(tok_table, &tmp.val.name, data + pos, n_read), return LEXER_BAD_ALLOC; );

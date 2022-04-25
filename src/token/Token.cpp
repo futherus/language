@@ -4,7 +4,7 @@
 
 #include "Token.h"
 #include "../reserved_names.h"
-#include "../dumpsystem/dumpsystem.h"
+#include "../common/dumpsystem.h"
 
 static const ptrdiff_t TOK_MIN_CAP     = 8;
 static const ptrdiff_t TOK_CAP_MULTPLR = 2;
@@ -19,7 +19,7 @@ static token_err array_resize_(Token_array* tok_arr)
     else
         new_cap = tok_arr->cap * TOK_CAP_MULTPLR;
 
-    Token* new_data = (Token*) realloc(tok_arr->data, new_cap * sizeof(Token));
+    Token* new_data = (Token*) realloc(tok_arr->data, (size_t) new_cap * sizeof(Token));
     ASSERT_RET$(new_data, TOKEN_BAD_ALLOC);
 
     tok_arr->data = new_data;
@@ -64,7 +64,7 @@ static token_err nametable_resize_(Token_nametable* tok_table)
     else
         new_cap = tok_table->cap * TOK_CAP_MULTPLR;
     
-    char** new_ptr = (char**) realloc(tok_table->name_arr, new_cap * sizeof(char*));
+    char** new_ptr = (char**) realloc(tok_table->name_arr, (size_t) new_cap * sizeof(char*));
     ASSERT_RET$(new_ptr, TOKEN_BAD_ALLOC);
 
     tok_table->name_arr = new_ptr;
@@ -82,7 +82,7 @@ static ptrdiff_t nametable_find_(Token_nametable* tok_table, const char name[], 
         ptrdiff_t len = (ptrdiff_t) strlen(tok_table->name_arr[iter]);
 
         if(len == name_sz)
-            if(strncmp(name, tok_table->name_arr[iter], name_sz) == 0)
+            if(strncmp(name, tok_table->name_arr[iter], (size_t) name_sz) == 0)
                 return iter;
     }
 
@@ -102,10 +102,10 @@ token_err token_nametable_add(Token_nametable* tok_table, char** dst_ptr, const 
     if(tok_table->cap == tok_table->size)
         PASS$(!nametable_resize_(tok_table), return TOKEN_BAD_ALLOC; );
     
-    char* new_ptr = (char*) calloc(name_sz + 1, sizeof(char));
+    char* new_ptr = (char*) calloc((size_t) name_sz + 1, sizeof(char));
     ASSERT_RET$(new_ptr, TOKEN_BAD_ALLOC);
 
-    memcpy(new_ptr, name, name_sz);
+    memcpy(new_ptr, name, (size_t) name_sz);
     new_ptr[name_sz] = '\0';
 
     tok_table->name_arr[tok_table->size] = new_ptr;
@@ -119,7 +119,10 @@ token_err token_nametable_add(Token_nametable* tok_table, char** dst_ptr, const 
 void token_nametable_dstr(Token_nametable* tok_table)
 {
     assert(tok_table);
-    
+
+    for(ptrdiff_t iter = 0; iter < tok_table->size; iter++)
+        free(tok_table->name_arr[iter]);
+
     if(tok_table->name_arr)
         free(tok_table->name_arr);
     

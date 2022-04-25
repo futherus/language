@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "nametable.h"
-#include "../../dumpsystem/dumpsystem.h"
+#include "../common/dumpsystem.h"
 
 static const ptrdiff_t NAMETABLE_MIN_CAP     = 8;
 static const ptrdiff_t NAMETABLE_CAP_MULTPLR = 2;
@@ -47,7 +47,7 @@ static generator_err vartable_resize_(Variable_table* table)
     else
         new_cap = table->cap * NAMETABLE_CAP_MULTPLR;
     
-    Variable* new_arr = (Variable*) realloc(table->array, new_cap * sizeof(Variable));
+    Variable* new_arr = (Variable*) realloc(table->array, (size_t) new_cap * sizeof(Variable));
     ASSERT_RET$(new_arr, GENERATOR_BAD_ALLOC);
 
     table->array = new_arr;
@@ -114,7 +114,7 @@ static generator_err functable_resize_(Function_table* table)
     else
         new_cap = table->cap * NAMETABLE_CAP_MULTPLR;
     
-    Function* new_arr = (Function*) realloc(table->array, new_cap * sizeof(Function));
+    Function* new_arr = (Function*) realloc(table->array, (size_t) new_cap * sizeof(Function));
     ASSERT_RET$(new_arr, GENERATOR_BAD_ALLOC);
 
     table->array = new_arr;

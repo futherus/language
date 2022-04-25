@@ -3,12 +3,12 @@
 #include <sys/stat.h>
 #include <assert.h>
 
-#include "parser/parser.h"
-#include "lexer/lexer.h"
+#include "parser.h"
+#include "lexer.h"
 #include "frontend.h"
-#include "../dumpsystem/dumpsystem.h"
-#include "../jumps.h"
-#include "../args/args.h"
+#include "../common/dumpsystem.h"
+#include "../common/jumps.h"
+#include "../common/args.h"
 
 static int get_file_sz_(const char filename[], size_t* sz)
 {
@@ -16,7 +16,7 @@ static int get_file_sz_(const char filename[], size_t* sz)
     if(stat(filename, &buff) == -1)
         return -1;
     
-    *sz = buff.st_size;
+    *sz = (size_t) buff.st_size;
     
     return 0;
 }
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 TRY__
     ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
                                                 FRONTEND_INFILE_FAIL,  FAIL__);
-    data = (char*) calloc(file_sz, sizeof(char));
+    data = (char*) calloc(file_sz + 1, sizeof(char));
     ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
     istream = fopen(infile_name, "r");
@@ -62,10 +62,11 @@ TRY__
     fclose(istream);
     istream = nullptr;
 
-    data = (char*) realloc(data, file_sz * sizeof(char));
+    data = (char*) realloc(data, (file_sz + 1) * sizeof(char));
     ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
+    data[file_sz] = 0; // null-termination of buffer
 
-    lexer_error = lexer(&tok_arr, &tok_table, data, file_sz);
+    lexer_error = lexer(&tok_arr, &tok_table, data, (ptrdiff_t) file_sz);
     
     free(data);
     data = nullptr;
