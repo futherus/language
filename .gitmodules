@@ -1,3 +1,6 @@
 [submodule "include/Processor"]
 	path = include/Processor
 	url = git@github.com:futherus/Processor.git
+[submodule "include/logs"]
+	path = include/logs
+	url = git@github.com:futherus/logs.git

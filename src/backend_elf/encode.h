@@ -4,12 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct Buffer
-{
-    uint8_t* arr;
-    size_t size;
-    size_t cap;
-};
+#include "buffer.h"
 
 typedef enum
 {
@@ -72,8 +67,8 @@ struct Instruction
     Operand  op2;
 };
 
-Operand IMM(uint32_t val);
-Operand MEM(uint8_t scale, Operand index, Operand base, uint32_t disp);
+Operand IMM(int32_t val);
+Operand MEM(uint8_t scale, Operand index, Operand base, int32_t disp);
 
 void encode(Buffer* buffer, Instruction instr);
 

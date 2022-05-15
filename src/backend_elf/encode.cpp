@@ -5,48 +5,6 @@
 
 #include "encode.h"
 
-static int buffer_resize(Buffer* buffer)
-{
-    assert(buffer);
-
-    if(buffer->cap == 0)
-        buffer->cap = 1024;
-    size_t new_cap = buffer->cap * 2;
-    uint8_t* ptr = (uint8_t*) realloc(buffer->arr, new_cap * sizeof(uint8_t));
-    assert(ptr && "Allocation failed");
-
-    buffer->arr = ptr;
-    buffer->cap = new_cap;
-
-    return 0;
-}
-
-static int buffer_append_u8(Buffer* buffer, uint8_t val)
-{
-    assert(buffer);
-
-    if(buffer->arr == nullptr || buffer->cap == 0)
-        buffer_resize(buffer);
-
-    buffer->arr[buffer->size] = val;
-    buffer->size++;
-
-    return 0;
-}
-
-static int buffer_append_i32(Buffer* buffer, int32_t val)
-{
-    assert(buffer);
-
-    if(buffer->arr == nullptr || buffer->cap == 0)
-        buffer_resize(buffer);
-
-    *((int32_t*) (buffer->arr + buffer->size)) = val;
-    buffer->size += sizeof(int32_t);
-
-    return 0;
-}
-
 Operand IMM(int32_t val)
 {
     Operand op = {};
@@ -139,13 +97,13 @@ const Operand RDI = {
     (PREFIX)                \
 
 #define GEN_OPCODE(OP, DIR_EXT, SZ)            \
-    ((OP) | (DIR_EXT & 0b1) << 1 | (SZ & 0b1)) \
+    ( (OP) | ((uint8_t) ((DIR_EXT & 0b1u) << 1u)) | ((uint8_t) (SZ & 0b1u)) ) \
 
 #define GEN_MODRM(MOD, REG_OP, RM)                             \
-    ((MOD & 0b11) << 6 | (REG_OP & 0b111) << 3 | (RM & 0b111)) \
+    ( ((uint8_t) ((MOD & 0b11u) << 6u)) | ((uint8_t) ((REG_OP & 0b111u) << 3u)) | (RM & 0b111u) ) \
 
 #define GEN_SIB(SCALE, INDEX, BASE)                                 \
-    ((SCALE & 0b11) << 6 | (INDEX & 0b111) << 3 | (BASE & 0b111))   \
+    ( ((uint8_t) ((SCALE & 0b11u) << 6u)) | ((uint8_t) ((INDEX & 0b111u) << 3u)) | (BASE & 0b111u) )   \
 
 /*
 void instr_rr(Buffer* buffer, Mnemonic opcode, Register op1, Register op2)
@@ -227,7 +185,7 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
     // [00 011 000 ] [---xx---] [---xx---]      add ebx, [rax]
     if(!op.is_index && op.is_base && !op.is_disp)
     {
-        buffer_append_u8(buffer, GEN_MODRM(0b00, reg_op, op.base));
+        buffer_append_u8(buffer, GEN_MODRM(0b00u, reg_op, op.base));
 
         // no SIB
         
@@ -423,7 +381,7 @@ static void instr_pop(Buffer* buffer, Instruction instr)
             memory_operand(buffer, 0b000, instr.op1.mem);
             break;
         }
-        case OP_NOTYPE: default:
+        case OP_NOTYPE: case OP_IMMEDIATE: default:
         {
             assert(0);
         }
@@ -488,12 +446,17 @@ void encode(Buffer* buffer, Instruction instr)
         case PUSH:
             instr_push(buffer, instr);
             break;
+        case POP:
+            instr_pop(buffer, instr);
+            break;
         case CALL:
             instr_call(buffer, instr);
             break;
         case RET:
             instr_ret(buffer, instr);
             break;
+        default:
+            assert(0);
     }
 }
 
@@ -501,7 +464,7 @@ void encode(Buffer* buffer, Instruction instr)
 #undef instr_mov
 #undef instr_sub
 
-
+/*
 
 int main()
 {
@@ -542,3 +505,4 @@ int main()
     return 0;
 }
 
+*/
