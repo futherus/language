@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #include "relocation.h"
-#include "elf.h"
+#include "../../include/logs/logs.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -28,7 +28,7 @@ static int relocations_resize(Relocations* rel, size_t new_cap)
 int relocations_ctor(Relocations* rel)
 {
     assert(rel);
-    rel = {};
+    *rel = {};
 
     relocations_resize(rel, 256);
 
@@ -41,7 +41,7 @@ void relocations_dtor(Relocations* rel)
 
     free(rel->buffer);
 
-    rel = {};
+    *rel = {};
 }
 
 int relocations_insert(Relocations* rel, Reloc reloc)
@@ -52,6 +52,7 @@ int relocations_insert(Relocations* rel, Reloc reloc)
         relocations_resize(rel, rel->buffer_cap * 2);
 
     rel->buffer[rel->buffer_sz] = reloc;
+    rel->buffer_sz++;
 
     return 0;
 }
@@ -69,14 +70,15 @@ int relocations_resolve(Relocations* rel, Symtable* tbl, Binary* bin)
         const Symbol*  src_sym  = &tbl->buffer[reloc->src_nametable_index];
         const Section* src_sect = &bin->sections[src_sym->section_descriptor];
 
-        assert(reloc->dst_addr_size == sizeof(int32_t) && "Invalid displacement size");
+        // We have offset of address to substitute and assume that displacement
+        // is the last part of instruction. Therefore, rip = addr + sizeof(int32_t)
+        int32_t dst_subst = reloc->dst_init_val + 
+                            (int32_t) (src_sect->offset + src_sym->offset - 
+                                       dst_sect->offset - reloc->dst_offset - sizeof(int32_t));
 
-        int32_t disp = (int32_t) ( 
-                       (src_sect->offset + src_sym->offset) - 
-                       (dst_sect->offset + reloc->dst_offset + reloc->dst_addr_size)
-                    );
-
-        memcpy(&dst_sect->buffer[reloc->dst_offset], &disp, reloc->dst_addr_size);
+        LOG$("(%s) %d, %lx : %lx", src_sym->id, dst_subst, reloc->dst_section_descriptor, reloc->dst_offset);
+        buffer_seek(&dst_sect->buffer, reloc->dst_offset);
+        buffer_append_i32(&dst_sect->buffer, dst_subst);
     }
 
     return 0;

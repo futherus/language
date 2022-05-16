@@ -50,7 +50,7 @@ int  symtable_ctor(Symtable* tbl);
 void symtable_dtor(Symtable* tbl);
 
 int  symtable_find  (Symtable* tbl, const char* key, Symbol* retsym = nullptr, uint64_t* retindex = nullptr);
-int  symtable_insert(Symtable* tbl, Symbol sym);
+int  symtable_insert(Symtable* tbl, Symbol sym, uint64_t* retindex = nullptr);
 
 ///////////////////////////////////////////////////////////////////////////////
 

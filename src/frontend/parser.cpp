@@ -488,7 +488,7 @@ static parser_err conditional(Node** base)
         syntax_error("Opening parenthesis expected (body of negative)",&tok);
     
     PEEK(&tok, 0);
-    while(tok.type != TYPE_OP && tok.val.op != TOK_RFPAR)
+    while(tok.type != TYPE_OP || tok.val.op != TOK_RFPAR)
     {
         Node* tmp = (*base)->right;
         MK_AUX(&(*base)->right, TOK_STATEMENT);

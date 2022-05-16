@@ -150,7 +150,8 @@ void binary_reserve_hdrs(Binary* bin)
     {
         Section* sect = &bin->sections[iter];
 
-        bin->phdrs_num += sect->needs_phdr;
+        // Program header is not generated if section size == 0
+        bin->phdrs_num += sect->needs_phdr && sect->buffer.size;
         bin->shdrs_num += sect->needs_shdr;
     }
 
@@ -210,9 +211,9 @@ int binary_generate_phdrs(Binary* bin)
     {
         Section* sect = &bin->sections[iter];
 
-        if(!sect->needs_phdr)
+        if(!sect->needs_phdr || sect->buffer.size == 0)
             continue;
-
+        
         Elf64_Phdr phdr = {.p_type   = sect->ptype,
                            .p_flags  = sect->pflags,
                            .p_offset = sect->offset,
@@ -260,7 +261,7 @@ int binary_generate_shdrs(Binary* bin)
                            .sh_entsize   = 0x0
                           };
         
-        if(sect->needs_phdr)
+        if(sect->needs_phdr && sect->buffer.size != 0)
             shdr.sh_addr = DEFAULT_VIRTUAL_ADDR + sect->offset;
         else
             shdr.sh_addr = 0;

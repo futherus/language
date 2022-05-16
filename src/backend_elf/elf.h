@@ -115,9 +115,6 @@ struct Section
 
     Buffer      buffer;     // section body
 
-    // Relocation* relocs;     // relocations
-    // size_t      relocs_sz;  //
-
 // private
     uint64_t    offset;     // offset in bytes from file beginning
     uint64_t    descriptor; // index of section in Binary

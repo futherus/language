@@ -11,17 +11,12 @@ typedef enum
     OP_NOTYPE    = 0,
     OP_REGISTER  = 1,
     OP_MEMORY    = 2,
-    OP_IMMEDIATE = 3,
+    OP_IMM32     = 3,
 } Operand_type;
 
 struct Register
 {
     uint8_t id;
-};
-
-struct Immediate
-{
-    int32_t val;
 };
 
 struct Memory
@@ -43,17 +38,22 @@ struct Operand
 
     union
     {
-        Memory    mem;
-        Register  reg;
-        Immediate imm;
+        Memory   mem;
+        Register reg;
+        int32_t  imm32;
     };
 };
 
 enum Mnemonic
 {
     ADD = 1,
-    SUB,
     MOV,
+    LEA,
+    SUB,
+    CMP,
+    JMP,
+    JE,
+    JNE,
     PUSH,
     POP,
     RET,
@@ -67,7 +67,8 @@ struct Instruction
     Operand  op2;
 };
 
-Operand IMM(int32_t val);
+Operand IMM8(int8_t val);
+Operand IMM32(int32_t val);
 Operand MEM(uint8_t scale, Operand index, Operand base, int32_t disp);
 
 void encode(Buffer* buffer, Instruction instr);

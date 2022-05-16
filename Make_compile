@@ -4,7 +4,7 @@ SRCFLDR:= code
 LOGFLDR:= logs
 OBJFLDR:= inter
 
-SRC:=     benchmark
+SRC:=     simple
 
 CODE:=   $(SRCFLDR)/$(SRC).blr
 TREE:=   $(OBJFLDR)/$(SRC).tree
@@ -26,6 +26,8 @@ frontend: | $(OBJFLDR) $(LOGFLDR)
 	$(BIN)/frontend --src $(CODE) --dst $(TREE)
 backend: | $(OBJFLDR) $(LOGFLDR)
 	$(BIN)/backend --src $(TREE) --dst $(ASM)
+backend_elf: | $(OBJFLDR) $(LOGFLDR)
+	$(BIN)/backend_elf --src $(TREE) --dst $(ASM)
 asm: | $(OBJFLDR) $(LOGFLDR)
 	$(BIN)/assembler --src $(ASM) --dst $(TARGET)
 cpu: | $(OBJFLDR) $(LOGFLDR)

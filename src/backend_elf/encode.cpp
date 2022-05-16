@@ -5,11 +5,16 @@
 
 #include "encode.h"
 
-Operand IMM(int32_t val)
+static bool EQUAL(Operand op1, Operand op2)
+{
+    return !memcmp(&op1, &op2, sizeof(Operand));
+}
+
+Operand IMM32(int32_t val)
 {
     Operand op = {};
-    op.type = OP_IMMEDIATE;
-    op.imm.val = val;
+    op.type = OP_IMM32;
+    op.imm32 = val;
     return op;
 }
 
@@ -22,6 +27,9 @@ Operand MEM(uint8_t scale, Operand index, Operand base, int32_t disp)
 
     if(index.type == OP_REGISTER)
     {
+        if(EQUAL(index, RSP))
+            assert(0 && "RSP cannot be index register");
+
         op.mem.index    = index.reg.id;
         op.mem.is_index = true;
 
@@ -50,8 +58,8 @@ Operand MEM(uint8_t scale, Operand index, Operand base, int32_t disp)
         op.mem.is_base = true;
     }
 
-    // FIXME: if no register addressing and displacement==0 displacement shouldn't be dropped
-    if(disp)
+    // RBP addressing needs displacement field
+    if(disp || EQUAL(base, RBP) || EQUAL(index, RBP) || (!op.mem.is_index && !op.mem.is_base))
     {
         op.mem.disp    = disp;
         op.mem.is_disp = true;
@@ -180,9 +188,46 @@ void instr_ri(Buffer* buffer, Mnemonic opcode, Register op1, Immediate op2)
 
 static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
 {
-    // Base only (indirect register addressing)
-    // [00 reg base] [---xx---] [---xx---]
-    // [00 011 000 ] [---xx---] [---xx---]      add ebx, [rax]
+    if(op.is_base && op.base == RSP.reg.id)
+    {
+        // base only -> index && base
+        // [00 011 100] [00 100 100] [---xx---]     add ebx, [rsp]
+        if(!op.is_index && !op.is_disp)
+        {
+            buffer_append_u8(buffer, GEN_MODRM(0b00, reg_op, 0b100));
+
+            buffer_append_u8(buffer, GEN_SIB(op.scale, 0b100, 0b100));
+
+            // no disp
+
+            return;
+        }
+
+        // index && base -- OK
+        // [00 011 100] [01 010 100] [---xx---]     add ebx, [2*rdx + rsp]
+
+        // index && base && disp -- OK
+        // [10 011 100] [01 011 100] [11100000]     add ebx, [rsp + 2*rbx + 7]
+
+        // base && disp -> index && base && disp
+        // [10 011 100] [00 100 100] [11100000]     add ebx, [rsp + 7]
+        if(!op.is_index && op.is_disp)
+        {
+            // buffer_append_u8(buffer, GEN_MODRM(0b01, reg_op, 0b100));
+            buffer_append_u8(buffer, GEN_MODRM(0b10, reg_op, 0b100));
+            
+            buffer_append_u8(buffer, GEN_SIB(0b00, 0b100, 0b100));
+            
+            buffer_append_i32(buffer, op.disp);
+
+            return;
+        }
+    }
+
+    // base only (indirect register addressing)
+    // [00 reg bas] [---xx---] [---xx---]
+    // [00 011 000] [---xx---] [---xx---]      add ebx, [rax]
+    // <see index && base>                     add ebx, [rsp]
     if(!op.is_index && op.is_base && !op.is_disp)
     {
         buffer_append_u8(buffer, GEN_MODRM(0b00u, reg_op, op.base));
@@ -190,11 +235,13 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         // no SIB
         
         // no disp
+        
+        return;
     }
 
-    // Disp only
-    // [00 reg 101 ] [---xx---] [displace]
-    // [00 011 101 ] [---xx---] [11000000]      add ebx, [rip + 3]
+    // disp only
+    // [00 reg 101] [---xx---] [displace]
+    // [00 011 101] [---xx---] [11000000]      add ebx, [rip + 3]
     if(!op.is_index && !op.is_base && op.is_disp)
     {
         buffer_append_u8(buffer, GEN_MODRM(0b00, reg_op, 0b101));
@@ -202,11 +249,15 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         // no SIB
 
         buffer_append_i32(buffer, op.disp);
+
+        return;
     }
 
     // index && base
     // [00 reg 100] [sc idx bas] [---xx---]
     // [00 011 100] [01 010 000] [---xx---]     add ebx, [2*rdx + rax]
+    // [00 011 100] [00 100 100] [---xx---]     add ebx, [rsp]
+    // [00 011 100] [01 010 100] [---xx---]     add ebx, [2*rdx + rsp]
     if(op.is_index && op.is_base && !op.is_disp)
     {
         buffer_append_u8(buffer, GEN_MODRM(0b00, reg_op, 0b100));
@@ -214,11 +265,16 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         buffer_append_u8(buffer, GEN_SIB(op.scale, op.index, op.base));
 
         // no disp
+
+        return;
     }
 
     // index && base && disp
     // [10 reg 100] [sc idx bas] [displace]
     // [10 011 100] [01 010 000] [11100000]     add ebx, [2*rdx + rax + 7]
+    // [10 011 100] [00 100 100] [11100000]     add ebx, [rsp + 7]
+    // [10 011 100] [01 011 100] [11100000]     add ebx, [rsp + 2*rbx + 7]
+    // <not valid>                              add ebx, [rbx + 2*rsp + 7]
     if(op.is_index && op.is_base && op.is_disp)
     {
         // buffer_append_u8(buffer, GEN_MODRM(0b01, reg_op, 0b100));
@@ -227,11 +283,14 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         buffer_append_u8(buffer, GEN_SIB(op.scale, op.index, op.base));
         
         buffer_append_i32(buffer, op.disp);
+
+        return;
     }
 
     // base && disp
     // [10 reg bas] [---xx---] [displace]
     // [10 011 010] [---xx---] [11100000]       add ebx, [rdx + 7]
+    // <see index && base && disp>              add ebx, [rsp + 7]
     if(!op.is_index && op.is_base && op.is_disp)
     {
         buffer_append_u8(buffer, GEN_MODRM(0b10, reg_op, op.base));
@@ -239,11 +298,14 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         // no SIB
 
         buffer_append_i32(buffer, op.disp);
+
+        return;
     }
 
     // index && disp
     // [00 reg 100] [sc idx 101] [displace]
     // [00 011 100] [01 010 101] [11100000]     add ebx, [2*rdx + 7]
+    // <not valid>                              add ebx, [2*rsp + 7]
     if(op.is_index && !op.is_base && op.is_disp)
     {
         buffer_append_u8(buffer, GEN_MODRM(0b00, reg_op, 0b100));
@@ -251,19 +313,24 @@ static void memory_operand(Buffer* buffer, uint8_t reg_op, Memory op)
         buffer_append_u8(buffer, GEN_SIB(op.scale, op.index, 0b101));
 
         buffer_append_i32(buffer, op.disp);
+
+        return;
     }
 }
 
-#define instr_mov(BUFFER, INSTR)                                \
-    instr_ariphmetic(BUFFER, INSTR, 0x88, 0x88, 0xC7, 0b000)    \
+#define instr_mov(BUFFER, INSTR)                          \
+    instr_ariphmetic(BUFFER, INSTR, 0x88, 0xC7, 0b000)    \
 
-#define instr_add(BUFFER, INSTR)                                \
-    instr_ariphmetic(BUFFER, INSTR, 0x00, 0x00, 0x80, 0b000)    \
+#define instr_add(BUFFER, INSTR)                          \
+    instr_ariphmetic(BUFFER, INSTR, 0x00, 0x80, 0b000)    \
 
-#define instr_sub(BUFFER, INSTR)                                \
-    instr_ariphmetic(BUFFER, INSTR, 0x28, 0x28, 0x80, 0b101)    \
+#define instr_sub(BUFFER, INSTR)                          \
+    instr_ariphmetic(BUFFER, INSTR, 0x28, 0x80, 0b101)    \
     
-static void instr_ariphmetic(Buffer* buffer, Instruction instr, uint8_t register_op, uint8_t memory_op, uint8_t immediate_op, uint8_t immediate_reg_op)
+#define instr_cmp(BUFFER, INSTR)                          \
+    instr_ariphmetic(BUFFER, INSTR, 0x38, 0x80, 0b111)    \
+
+static void instr_ariphmetic(Buffer* buffer, Instruction instr, uint8_t regmem_op, uint8_t immediate_op, uint8_t immediate_reg_op)
 {
     assert(buffer);
 
@@ -277,21 +344,21 @@ static void instr_ariphmetic(Buffer* buffer, Instruction instr, uint8_t register
             {
                 case OP_REGISTER:
                 {
-                    buffer_append_u8(buffer, GEN_OPCODE(register_op, 0b0, 0b1)); // dir = 0: R/M <- REG; sz = 1: 32 bits (64 because of prefix)
+                    buffer_append_u8(buffer, GEN_OPCODE(regmem_op, 0b0, 0b1)); // dir = 0: R/M <- REG; sz = 1: 32 bits (64 because of prefix)
                     buffer_append_u8(buffer, GEN_MODRM(0b11, instr.op2.reg.id, instr.op1.reg.id));
                     break;
                 }
                 case OP_MEMORY:
                 {
-                    buffer_append_u8(buffer, GEN_OPCODE(memory_op, 0b1, 0b1)); // dir = 1: REG <- R/M; sz = 1: 32 bits (64 because of prefix)
+                    buffer_append_u8(buffer, GEN_OPCODE(regmem_op, 0b1, 0b1)); // dir = 1: REG <- R/M; sz = 1: 32 bits (64 because of prefix)
                     memory_operand(buffer, instr.op1.reg.id, instr.op2.mem);
                     break;
                 }
-                case OP_IMMEDIATE:
+                case OP_IMM32:
                 {
                     buffer_append_u8(buffer, GEN_OPCODE(immediate_op, 0b0, 0b1));
                     buffer_append_u8(buffer, GEN_MODRM(0b11, immediate_reg_op, instr.op1.reg.id));
-                    buffer_append_i32(buffer, instr.op2.imm.val);
+                    buffer_append_i32(buffer, instr.op2.imm32);
                     break;
                 }
                 case OP_NOTYPE: default:
@@ -307,15 +374,15 @@ static void instr_ariphmetic(Buffer* buffer, Instruction instr, uint8_t register
             {
                 case OP_REGISTER:
                 {
-                    buffer_append_u8(buffer, GEN_OPCODE(register_op, 0b0, 0b1)); // dir = 0: R/M <- REG; sz = 1: 32 bits (64 because of prefix)
+                    buffer_append_u8(buffer, GEN_OPCODE(regmem_op, 0b0, 0b1)); // dir = 0: R/M <- REG; sz = 1: 32 bits (64 because of prefix)
                     memory_operand(buffer, instr.op2.reg.id, instr.op1.mem);
                     break;
                 }
-                case OP_IMMEDIATE:
+                case OP_IMM32:
                 {
                     buffer_append_u8(buffer, GEN_OPCODE(immediate_op, 0b0, 0b1));
                     memory_operand(buffer, immediate_reg_op, instr.op1.mem);
-                    buffer_append_i32(buffer, instr.op2.imm.val);
+                    buffer_append_i32(buffer, instr.op2.imm32);
                     break;
                 }
                 case OP_MEMORY: case OP_NOTYPE: default:
@@ -325,11 +392,24 @@ static void instr_ariphmetic(Buffer* buffer, Instruction instr, uint8_t register
             }
             break;
         }
-        case OP_IMMEDIATE: case OP_NOTYPE: default:
+        case OP_IMM32: case OP_NOTYPE: default:
         {
             assert(0);
         }
     }
+}
+
+static void instr_lea(Buffer* buffer, Instruction instr)
+{
+    assert(buffer);
+    assert(instr.op1.type == OP_REGISTER);
+    assert(instr.op2.type == OP_MEMORY);
+
+    buffer_append_u8(buffer, GEN_PREFIX(0x48));
+
+    buffer_append_u8(buffer, GEN_OPCODE(0x8D, 0b0, 0b0));
+    memory_operand(buffer, instr.op1.reg.id, instr.op2.mem);
+
 }
 
 static void instr_push(Buffer* buffer, Instruction instr)
@@ -350,10 +430,10 @@ static void instr_push(Buffer* buffer, Instruction instr)
             memory_operand(buffer, 0b110, instr.op1.mem);
             break;
         }
-        case OP_IMMEDIATE:
+        case OP_IMM32:
         {
             buffer_append_u8(buffer, GEN_OPCODE(0x68, 0b0, 0b0));
-            buffer_append_i32(buffer, instr.op1.imm.val);
+            buffer_append_i32(buffer, instr.op1.imm32);
             break;
         }
         case OP_NOTYPE: default:
@@ -381,11 +461,38 @@ static void instr_pop(Buffer* buffer, Instruction instr)
             memory_operand(buffer, 0b000, instr.op1.mem);
             break;
         }
-        case OP_NOTYPE: case OP_IMMEDIATE: default:
+        case OP_NOTYPE: case OP_IMM32: default:
         {
             assert(0);
         }
     }
+}
+
+static void instr_jmp(Buffer* buffer, Instruction instr)
+{
+    assert(buffer);
+    assert(instr.op1.type == OP_IMM32);
+    assert(instr.op2.type == OP_NOTYPE);
+
+    buffer_append_u8(buffer, GEN_OPCODE(0xE9, 0b0, 0b0));
+    buffer_append_i32(buffer, instr.op1.imm32);
+}
+
+#define instr_je(BUFFER, INSTR)              \
+    instr_cond_jumps(BUFFER, INSTR, 0x84)    \
+
+#define instr_jne(BUFFER, INSTR)             \
+    instr_cond_jumps(BUFFER, INSTR, 0x85)    \
+
+static void instr_cond_jumps(Buffer* buffer, Instruction instr, uint8_t immediate_op)
+{
+    assert(buffer);
+    assert(instr.op1.type == OP_IMM32);
+    assert(instr.op2.type == OP_NOTYPE);
+
+    buffer_append_u8(buffer, 0x0F);
+    buffer_append_u8(buffer, GEN_OPCODE(immediate_op, 0b0, 0b0));
+    buffer_append_i32(buffer, instr.op1.imm32);
 }
 
 static void instr_call(Buffer* buffer, Instruction instr)
@@ -407,10 +514,10 @@ static void instr_call(Buffer* buffer, Instruction instr)
             memory_operand(buffer, 0b010, instr.op1.mem);
             break;
         }
-        case OP_IMMEDIATE:
+        case OP_IMM32:
         {
             buffer_append_u8(buffer, GEN_OPCODE(0xE8, 0b0, 0b0));
-            buffer_append_i32(buffer, instr.op1.imm.val);
+            buffer_append_i32(buffer, instr.op1.imm32);
             break;
         }
         case OP_NOTYPE: default:
@@ -440,8 +547,23 @@ void encode(Buffer* buffer, Instruction instr)
         case MOV:
             instr_mov(buffer, instr);
             break;
+        case LEA:
+            instr_lea(buffer, instr);
+            break;
         case SUB:
             instr_sub(buffer, instr);
+            break;
+        case CMP:
+            instr_cmp(buffer, instr);
+            break;
+        case JMP:
+            instr_jmp(buffer, instr);
+            break;
+        case JE:
+            instr_je(buffer, instr);
+            break;
+        case JNE:
+            instr_jne(buffer, instr);
             break;
         case PUSH:
             instr_push(buffer, instr);
@@ -473,32 +595,90 @@ int main()
     encode(&buffer, {ADD, RAX, RAX});
     encode(&buffer, {ADD, RDX, MEM(2, RDI, RAX, -6)});
     encode(&buffer, {ADD, MEM(2, RDI, RAX, 6), RCX});
-    encode(&buffer, {ADD, RAX, IMM(0x12345678)});
-    
-    encode(&buffer, {SUB, RAX, RAX});
-    encode(&buffer, {SUB, RDX, MEM(2, RDI, RAX, -6)});
-    encode(&buffer, {SUB, MEM(2, RDI, RAX, 6), RCX});
-    encode(&buffer, {SUB, RAX, IMM(0x12345678)});
+    encode(&buffer, {ADD, RAX, IMM32(0x12345678)});
 
-    encode(&buffer, {MOV, RBX, RBX});
-    encode(&buffer, {MOV, RDX, MEM(2, RDI, RAX, -6)});
-    encode(&buffer, {MOV, MEM(2, RDI, RAX, 6), RCX});
-    encode(&buffer, {MOV, RAX, IMM(0x12345678)});
+    encode(&buffer, {PUSH, RAX, {}});
+
+    encode(&buffer, {ADD, RBP, RBP});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RAX, -6)});
+    encode(&buffer, {ADD, RDX, MEM(2, RAX, RBP, -6)});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RBP, -6)});
+    
+    encode(&buffer, {ADD, RAX, MEM(0x0, {}, RBP, -6)});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, {}, -6)});
+
+    encode(&buffer, {PUSH, RBX, {}});
+    
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RAX, {})});
+    encode(&buffer, {ADD, RDX, MEM(2, RAX, RBP, {})});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RBP, {})});
+    
+    encode(&buffer, {ADD, RAX, MEM(0x0, {}, RBP, {})});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, {}, {})});
+
+    encode(&buffer, {PUSH, RCX, {}});
+
+    encode(&buffer, {ADD, RSP, RSP});
+    encode(&buffer, {ADD, RDX, MEM(2, RAX, RSP, -6)});
+    // encode(&buffer, {ADD, RDX, MEM(2, RSP, RAX, -6)});  not valid
+    encode(&buffer, {ADD, RAX, MEM(0x0, {}, RSP, -6)});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RSP, -6)});
 
     encode(&buffer, {PUSH, RDX, {}});
+
+    encode(&buffer, {ADD, RSP, RSP});
+    encode(&buffer, {ADD, RDX, MEM(2, RAX, RSP, {})});
+    // encode(&buffer, {ADD, RDX, MEM(2, RSP, RAX, {})});  not valid
+    encode(&buffer, {ADD, RAX, MEM(0x0, {}, RSP, {})});
+    encode(&buffer, {ADD, RAX, MEM(2, RBP, RSP, {})});
+
+    encode(&buffer, {PUSH, RSI, {}});
+
+    encode(&buffer, {CMP, RAX, RAX});
+    encode(&buffer, {CMP, RBX, MEM(0, {}, {}, 0x30)});
+    encode(&buffer, {CMP, RDX, MEM(2, RDI, RAX, -6)});
+    encode(&buffer, {CMP, MEM(2, RDI, RAX, 6), RCX});
+    encode(&buffer, {CMP, RAX, IMM32(0x12345678)});
+
+    encode(&buffer, {SUB, RAX, RAX});
+    encode(&buffer, {SUB, RBX, MEM(0, {}, {}, 0x30)});
+    encode(&buffer, {SUB, RDX, MEM(2, RDI, RAX, -6)});
+    encode(&buffer, {SUB, MEM(2, RDI, RAX, 6), RCX});
+    encode(&buffer, {SUB, RAX, IMM32(0x12345678)});
+
+    encode(&buffer, {MOV, RBX, RBX});
+    encode(&buffer, {MOV, RBX, MEM(0, {}, {}, 0x30)});
+    encode(&buffer, {MOV, RDX, MEM(2, RDI, RAX, -6)});
+    encode(&buffer, {MOV, MEM(2, RDI, RAX, 6), RCX});
+    encode(&buffer, {MOV, RAX, IMM32(0x12345678)});
+
+    encode(&buffer, {PUSH, RDI, {}});
+
+    encode(&buffer, {PUSH, RDX, {}});
+    encode(&buffer, {PUSH, MEM(0, {}, {}, 0x30)});
     encode(&buffer, {PUSH, MEM(2, RDI, RAX, 6), {}});
-    encode(&buffer, {PUSH, IMM(0x12345678)});
+    encode(&buffer, {PUSH, MEM(0, {}, RAX, 6), {}});
+    encode(&buffer, {PUSH, IMM32(0x12345678)});
+
+    encode(&buffer, {JMP, IMM32(0x12345678)});
+    encode(&buffer, {JE,  IMM32(0x12345678)});
+    encode(&buffer, {JNE, IMM32(0x12345678)});
+
+    encode(&buffer, {POP, RDX, {}});
+    encode(&buffer, {POP, MEM(0, {}, {}, 0x30)});
+    encode(&buffer, {POP, MEM(2, RDI, RAX, 6), {}});
+    encode(&buffer, {POP, MEM(0, {}, RAX, 6), {}});
 
     encode(&buffer, {CALL, RDX, {}});
     encode(&buffer, {CALL, MEM(2, RDI, RAX, 6), {}});
-    encode(&buffer, {CALL, IMM(0x12345678)});
+    encode(&buffer, {CALL, IMM32(0x12345678)});
 
     encode(&buffer, {RET, {}, {}});
 
     FILE* outfile = fopen("output", "wb");
     assert(outfile);
 
-    fwrite(buffer.arr, sizeof(uint8_t), buffer.size, outfile);
+    fwrite(buffer.buf, sizeof(uint8_t), buffer.size, outfile);
 
     fclose(outfile);
     
