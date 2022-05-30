@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #include "symtable.h"
-#include "elf.h"
+#include "elf_wrap.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -50,7 +50,7 @@ int symtable_find(Symtable* tbl, const char* key, Symbol* ret, uint64_t* retinde
 
     for(size_t iter = 0; iter < tbl->buffer_sz; iter++)
     {
-        if(key == tbl->buffer[iter].id) // all id's are in nametable, ptr equality => id's equality
+        if(strcmp(key, tbl->buffer[iter].id) == 0) // all id's are in nametable, ptr equality => id's equality
         {
             if(ret)
                 *ret = tbl->buffer[iter];
@@ -83,8 +83,6 @@ int symtable_insert(Symtable* tbl, Symbol sym, uint64_t* retindex)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-const char CALL_PARAMETER[] = "(((__call_parameter__)))";
 
 static int localtable_resize(Localtable* tbl, size_t new_cap)
 {
@@ -127,7 +125,7 @@ int localtable_find(Localtable* tbl, const char* key, Local_var* ret)
     
     for(size_t iter = 0; iter < tbl->buffer_sz; iter++)
     {
-        if(key == tbl->buffer[iter].id) // all id's are in nametable, ptr equality => id equality
+        if(strcmp(key, tbl->buffer[iter].id) == 0)
         {
             if(ret)
                 *ret = tbl->buffer[iter];
@@ -143,6 +141,9 @@ int localtable_allocate(Localtable* tbl, Local_var* var)
 {
     assert(tbl && var);
 
+    if(var->size == 0)
+        var->size = 1;
+
     assert(localtable_find(tbl, var->id) == 1);
 
     if(tbl->buffer_cap == tbl->buffer_sz)
@@ -157,44 +158,14 @@ int localtable_allocate(Localtable* tbl, Local_var* var)
     return 0;
 }
 
-int localtable_allocate_argument(Localtable* tbl, Local_var* var)
-{
-    assert(tbl && var);
-    
-    if(tbl->buffer_cap == tbl->buffer_sz)
-        localtable_resize(tbl, tbl->buffer_cap * 2);
-
-    assert(var->size < INT32_MAX);
-    var->offset = tbl->offset_top - (int32_t) var->size * 8;
-    var->id     = CALL_PARAMETER;
-    tbl->buffer[tbl->buffer_sz] = *var;
-    tbl->buffer_sz++;
-    tbl->offset_top -= (int32_t) var->size * 8;
-
-    return 0;
-}
-
-int localtable_deallocate(Localtable* tbl, size_t count)
-{
-    assert(tbl);
-
-    if(count > tbl->buffer_sz)
-        assert(0 && "Deallocation count is greater than amount of locals");
-
-    if(tbl->buffer[tbl->buffer_sz - count].offset > 0)
-        assert(0 && "Cannot deallocate function parameters");    
-    
-    tbl->buffer_sz -= count;
-    tbl->offset_top = tbl->buffer[tbl->buffer_sz].offset;
-
-    return 0;
-}
-
 int localtable_set_parameter(Localtable* tbl, Local_var* var)
 {
     assert(tbl && var);
 
-    assert(!localtable_find(tbl, var->id));
+    assert(localtable_find(tbl, var->id) != 0);
+
+    if(var->size == 0)
+        var->size = 1;
 
     if(tbl->buffer_cap == tbl->buffer_sz)
         localtable_resize(tbl, tbl->buffer_cap * 2);
@@ -204,8 +175,8 @@ int localtable_set_parameter(Localtable* tbl, Local_var* var)
     var->offset = tbl->offset_bottom;
     tbl->buffer[tbl->buffer_sz] = *var;
     tbl->buffer_sz++;
-    assert(var->size < INT32_MAX);
-    tbl->offset_bottom = var->offset + (int32_t) var->size;
+    assert(var->size * 8 < INT32_MAX);
+    tbl->offset_bottom = var->offset + (int32_t) var->size * 8;
 
     return 0;
 }

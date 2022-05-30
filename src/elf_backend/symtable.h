@@ -8,6 +8,7 @@
 
 enum Symbol_type
 {
+    SYMBOL_TYPE_NOTYPE   = 0x0,
     SYMBOL_TYPE_FUNCTION = 0x1,
     SYMBOL_TYPE_VARIABLE = 0x2,
 };
@@ -26,11 +27,12 @@ struct Variable
 struct Symbol
 {
     Symbol_type type;
-    const char* id = nullptr;
+    const char* id   = nullptr;
 
-    // bool is_resolved;
     uint64_t offset;
     uint64_t section_descriptor;
+    uint64_t s_size;
+    uint64_t s_name;
 
     union
     {
@@ -78,10 +80,8 @@ void localtable_clean(Localtable* tbl);
 
 int  localtable_find(Localtable* tbl, const char* key, Local_var* ret = nullptr);
 
-int  localtable_allocate         (Localtable* tbl, Local_var* var);
-int  localtable_allocate_argument(Localtable* tbl, Local_var* var);
-int  localtable_set_parameter    (Localtable* tbl, Local_var* var);
-int  localtable_deallocate       (Localtable* tbl, size_t count);
+int  localtable_allocate     (Localtable* tbl, Local_var* var);
+int  localtable_set_parameter(Localtable* tbl, Local_var* var);
 
 ///////////////////////////////////////////////////////////////////////////////
 

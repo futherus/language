@@ -1,8 +1,9 @@
-#ifndef GENERATOR_H
-#define GENERATOR_H
+#ifndef ELF_GENERATOR_H
+#define ELF_GENERATOR_H
 
 #include "../tree/Tree.h"
-#include "elf.h"
+#include "elf_wrap.h"
+#include "../common/depend.h"
 
 enum generator_err
 {
@@ -13,6 +14,6 @@ enum generator_err
     GENERATOR_BAD_ALLOC = 4,
 };
 
-generator_err generator(Tree* tree, Binary* bin);
+generator_err generator(Tree* tree, Dependencies* deps, Binary* bin);
 
-#endif // GENERATOR_H
+#endif // ELF_GENERATOR_H

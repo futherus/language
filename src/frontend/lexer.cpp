@@ -100,6 +100,7 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
     ASSERT_RET$(data_sz > 0, LEXER_EMPTY_DATA);
     
     ptrdiff_t pos = 0;
+    bool is_in_directive = false;
     Token tmp = {};
 
     while(true)
@@ -137,6 +138,26 @@ lexer_err lexer(Token_array* tok_arr, Token_nametable* tok_table, const char dat
 
         if(data[pos] == COMMENT_END)
             lexer_err("Comment termination without comment start", data + pos);
+
+        if(data[pos] == DIRECTIVE_BEGIN && !is_in_directive)
+        {
+            is_in_directive = true;
+            tmp.type = TYPE_DIRECTIVE_BEGIN;
+            pos++;
+            PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; );
+
+            continue;
+        }
+
+        if(data[pos] == DIRECTIVE_END && is_in_directive)
+        {
+            is_in_directive = false;
+            tmp.type = TYPE_DIRECTIVE_END;
+            pos++;
+            PASS$(!token_array_add(tok_arr, &tmp), return LEXER_BAD_ALLOC; );
+
+            continue;
+        }
 
         #include "../reserved_operators.inc"
         #include "../reserved_keywords.inc"

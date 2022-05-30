@@ -44,21 +44,17 @@ struct Operand
     };
 };
 
+#define DEF_INSTR(ENUM, FUNC)   \
+    ENUM,                       \
+
 enum Mnemonic
 {
-    ADD = 1,
-    MOV,
-    LEA,
-    SUB,
-    CMP,
-    JMP,
-    JE,
-    JNE,
-    PUSH,
-    POP,
-    RET,
-    CALL,
+    INVALID_INSTR = 0,
+    
+    #include "encode.inc"
 };
+
+#undef DEF_INSTR
 
 struct Instruction
 {
@@ -81,5 +77,14 @@ extern const Operand RSP;
 extern const Operand RBP;
 extern const Operand RSI;
 extern const Operand RDI;
+
+extern const Operand R8;
+extern const Operand R9;
+extern const Operand R10;
+extern const Operand R11;
+extern const Operand R12;
+extern const Operand R13;
+extern const Operand R14;
+extern const Operand R15;
 
 #endif // ENCODE_H

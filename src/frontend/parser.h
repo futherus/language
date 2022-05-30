@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "../tree/Tree.h"
+#include "../common/depend.h"
 
 enum parser_err
 {
@@ -11,6 +12,6 @@ enum parser_err
     PARSER_TREE_FAIL = 3,
 };
 
-parser_err parse(Tree* tree, Token_array* tok_arr);
+parser_err parse(Tree* tree, Dependencies* deps, Token_array* tok_arr);
 
 #endif // PARSER_H

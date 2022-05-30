@@ -2,6 +2,10 @@
 #include <assert.h>
 
 #include "Token.h"
+#include "../config.h"
+#include "../reserved_names.h"
+
+#ifdef VERBOSE
 
 static FILE* DUMP_STREAM = nullptr;
 
@@ -118,6 +122,14 @@ void token_array_dump(Token_array* tok_arr)
                 PRINT("<td>  EOF  </td>\n<td>  --//--  </td>\n<td>  TYPE_EOF  </td>\n");
                 break;
             
+            case TYPE_DIRECTIVE_BEGIN:
+                PRINT("<td>  %c </td>\n<td>  --//--  </td>\n<td>  TYPE_DIRECTIVE_BEGIN  </td>\n", DIRECTIVE_BEGIN);
+                break;
+            
+            case TYPE_DIRECTIVE_END:
+                PRINT("<td>  %c </td>\n<td>  --//--  </td>\n<td>  TYPE_DIRECTIVE_END  </td>\n", DIRECTIVE_END);
+                break;
+
             default : case TYPE_NOTYPE :
                 assert(0);
         }
@@ -174,3 +186,22 @@ void token_dump_init(FILE* dump_stream)
 
     DUMP_STREAM = dump_stream;
 }
+
+#else // VERBOSE
+
+void token_array_dump(Token_array*)
+{
+    void(0);
+}
+
+void token_dump_init(FILE*)
+{
+    void(0);
+}
+
+void token_nametable_dump(Token_nametable*)
+{
+    void(0);
+}
+
+#endif // VERBOSE

@@ -2,6 +2,9 @@
 #include <assert.h>
 
 #include "nametable.h"
+#include "../config.h"
+
+#ifdef VERBOSE
 
 static FILE* DUMP_STREAM = nullptr;
 
@@ -91,3 +94,22 @@ void nametable_dump_init(FILE* dump_stream)
 
     DUMP_STREAM = dump_stream;
 }
+
+#else // VERBOSE
+
+void vartable_dump(Variable_table*)
+{
+    void(0);
+}
+
+void functable_dump(Function_table*)
+{
+    void(0);
+}
+
+void nametable_dump_init(FILE*)
+{
+    void(0);
+}
+
+#endif // VERBOSE

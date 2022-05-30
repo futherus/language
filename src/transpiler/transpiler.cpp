@@ -13,7 +13,7 @@ static int get_file_sz_(const char filename[], size_t* sz)
     if(stat(filename, &buff) == -1)
         return -1;
     
-    *sz = buff.st_size;
+    *sz = (size_t) buff.st_size;
     
     return 0;
 }

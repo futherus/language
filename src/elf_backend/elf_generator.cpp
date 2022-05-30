@@ -2,13 +2,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "generator_elf.h"
+#include "elf_generator.h"
 #include "symtable.h"
 #include "encode.h"
-#include "elf.h"
+#include "elf_wrap.h"
 #include "relocation.h"
 #include "../../include/logs/logs.h"
-//#include "hash.h"
 #include "../reserved_names.h"
 
 static Symtable*    SYMTABLE    = nullptr;
@@ -16,7 +15,7 @@ static Localtable*  LOCALTABLE  = nullptr;
 static Relocations* RELOCATIONS = nullptr;
 
 static Section* DATA = nullptr;
-static Section* INIT = nullptr;
+// static Section* INIT = nullptr;
 static Section* TEXT = nullptr;
 
 static generator_err IS_ERROR = GENERATOR_NOERR;
@@ -107,7 +106,7 @@ static generator_err variable(Section* sect, Node* node)
 
         Reloc reloc = {.dst_section_descriptor = sect->descriptor,
                        .dst_offset = sect->buffer.pos - sizeof(int32_t),
-                       .dst_init_val = 0,
+                       .dst_init_val = - (int32_t) sizeof(int32_t),
                        .src_nametable_index = sym_index
                       };
         
@@ -127,226 +126,140 @@ static generator_err variable(Section* sect, Node* node)
     return GENERATOR_NOERR;
 }
 
-/*
-static generator_err embedded(Node* node)
-{
-    assert(node);
-    assert(node->tok.type == TYPE_EMBED);
+#define DEF_OPER(MANGLE, OPCODE)                                    \
+    case TOK_##MANGLE:                                              \
+    {                                                               \
+        encode(&sect->buffer, {OPCODE, RAX, RBX});                  \
+        encode(&sect->buffer, {PUSH, RAX, {}});                     \
+        break;                                                      \
+    }                                                               \
 
+#define DEF_LOGICAL(MANGLE, OPCODE)                                 \
+    case TOK_##MANGLE:                                              \
+    {                                                               \
+        encode(&sect->buffer, {XOR, RDX, RDX});                     \
+        encode(&sect->buffer, {CMP, RAX, RBX});                     \
+        encode(&sect->buffer, {OPCODE, RDX, {}});                   \
+        encode(&sect->buffer, {PUSH, RDX, {}});                     \
+        break;                                                      \
+    }                                                               \
 
-    switch(node->tok.val.emb)
-    {
-        case TOK_SIN:
-        {
-            if(!node->right || node->left)
-                format_error("Embedded 'sin' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rex\n");
-            print_tab("sin rex\n");
-            break;
-        }
-        case TOK_COS:
-        {
-            if(!node->right || node->left)
-                format_error("Embedded 'cos' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rex\n");
-            print_tab("cos rex\n");
-            break;
-        }
-        case TOK_PRINT:
-        {
-            if(!node->right)
-                format_error("Embedded 'print' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("out\n");
-
-            print_tab("push 0\n");
-            break;
-        }
-        case TOK_SCAN:
-        {
-            if(node->right || node->left)
-                format_error("Embedded 'scan' cannot has arguments", &node->tok);
-
-            print_tab("in\n");
-            break;
-        }
-        case TOK_SHOW:
-        {
-            if(!node->right || !node->left)
-                format_error("Embedded 'show' requires 2 arguments", &node->tok);
-            
-            print("\n");
-
-            if(node->left->tok.type != TYPE_ID)
-                format_error("Embedded 'show' requires variable as first argument", &node->left->tok);
-
-            Variable* var = {};
-
-            if(node->left->right)
-            {
-                PASS$(!expression(node->left->right), return GENERATOR_PASS_ERROR; );
-                
-                print_tab("pop rex\n");
-                print_tab("push rex + ");
-            }
-            else
-            {
-                print_tab("push ");
-            }
-
-            if((var = vartable_find(GLOBALS, node->left->tok.val.name)) != nullptr)
-            {
-                print("rcx + %ld\n", var->offset);
-            }
-            else if((var = vartable_find(LOCALS, node->left->tok.val.name)) != nullptr)
-            {
-                print("rbx + %ld\n", var->offset);
-            }
-            else
-            {
-                semantic_error("Variable wasn't declared", &node->tok);
-            }
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rfx\n");
-            print_tab("pop rex\n");
-
-            print_tab("show rex, rfx\n");
-
-            print_tab("push 0\n\n");
-            break;
-        }
-        case TOK_INT:
-        {
-            if(!node->right || node->left)
-                format_error("Embedded 'int' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rex\n");
-            print_tab("int rex\n");
-            break;
-        }
-        case TOK_SQRT:
-        {
-            if(!node->right || node->left)
-                format_error("Embedded 'sqrt' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rex\n");
-            print_tab("sqrt rex\n");
-            break;
-        }
-        default:
-        {
-            assert(0);
-        }
-    }
-
-    return GENERATOR_NOERR;
-}
-*/
-
-/*
-#define PRINT_CMD(MANGLE, TXT)                                        \
-    if(node->tok.val.op == TOK_##MANGLE)                              \
-    {                                                                 \
-        if(!node->left || !node->right)                               \
-            format_error("Operator wrong descendants", &node->tok);   \
-        print_tab("%s\n", (TXT));                                     \
-    }                                                                 \
-    else                                                              \
-*/
+#define DEF_UNIMPLEMENTED(MANGLE)    \
+    case TOK_##MANGLE:               \
 
 static generator_err oper(Section* sect, Node* node)
 {
     assert(node);
     assert(node->tok.type == TYPE_OP);
 
-    encode(&sect->buffer, {POP, RBX, {}});
-    encode(&sect->buffer, {POP, RAX, {}});
-
-    if(node->tok.val.op == TOK_ADD)
+    if(node->left && node->right)
     {
-        if(!node->left || !node->right)
-            format_error("Operator wrong descendants", &node->tok);
-        
-        encode(&sect->buffer, {ADD, RAX, RBX});
+        encode(&sect->buffer, {POP, RBX, {}});
+        encode(&sect->buffer, {POP, RAX, {}});
+
+        switch(node->tok.val.op)
+        {
+            DEF_OPER(ADD, ADD)
+            DEF_OPER(SUB, SUB)
+            DEF_OPER(MUL, IMUL)
+            case TOK_DIV:
+            {
+                encode(&sect->buffer, {CQO, {}, {}});
+                encode(&sect->buffer, {IDIV, RBX, {}});
+                encode(&sect->buffer, {PUSH, RAX, {}});
+                break;
+            }
+            case TOK_OR:
+            {
+                encode(&sect->buffer, {XOR, RDX, RDX});
+                encode(&sect->buffer, {OR, RAX, RBX});
+                encode(&sect->buffer, {SETNE, RDX, {}});
+                encode(&sect->buffer, {PUSH, RDX, {}});
+                break;
+            }
+            case TOK_AND:
+            {                
+                encode(&sect->buffer, {TEST, RAX, RAX});
+                encode(&sect->buffer, {SETNE, RAX, {}});
+                encode(&sect->buffer, {XOR, RDX, RDX});
+                encode(&sect->buffer, {TEST, RBX, RBX});
+                encode(&sect->buffer, {SETNE, RDX});
+                encode(&sect->buffer, {AND, RAX, RDX});
+                encode(&sect->buffer, {PUSH, RAX, {}});
+                break;
+            }
+
+            DEF_LOGICAL(EQ, SETE)
+            DEF_LOGICAL(NEQ, SETNE)
+            DEF_LOGICAL(GEQ, SETGE)
+            DEF_LOGICAL(LEQ, SETLE)
+            DEF_LOGICAL(GREAT, SETG)
+            DEF_LOGICAL(LESS, SETL)
+
+            DEF_UNIMPLEMENTED(POWER)
+            default:
+                format_error("Unknown or unimplemented operator", &node->tok);
+        }
     }
-    else if(node->tok.val.op == TOK_SUB)
+    else if(!node->left && node->right && node->tok.val.op == TOK_NOT)
     {
-        if(!node->left || !node->right)
-            format_error("Operator wrong descendants", &node->tok);
-
-        encode(&sect->buffer, {SUB, RAX, RBX});
+        encode(&sect->buffer, {POP, RAX, {}});
+        encode(&sect->buffer, {XOR, RDX, RDX});
+        encode(&sect->buffer, {TEST, RAX, RAX});
+        encode(&sect->buffer, {SETE, RDX, {}});
+        encode(&sect->buffer, {PUSH, RDX, {}});
     }
     else
     {
-        format_error("Unknown operator", &node->tok);
+        format_error("Invalid operator descendants combination", &node->tok);
     }
-    
-    encode(&sect->buffer, {PUSH, RAX, {}});
-
-    // if(node->tok.val.op == TOK_NOT)
-    // {
-    //     if(node->left || !node->right)
-    //         format_error("Operator wrong descendants", &node->tok);
-    //     print_tab("push 0\n");
-    //     print_tab("eq\n");
-    // }
-    // else
-    // PRINT_CMD(ADD,   "add")
-    // PRINT_CMD(SUB,   "sub")
-    // PRINT_CMD(MUL,   "mul")
-    // PRINT_CMD(DIV,   "div")
-    // PRINT_CMD(POWER, "pow")
-    // PRINT_CMD(EQ,    "eq")
-    // PRINT_CMD(NEQ,   "neq")
-    // PRINT_CMD(GREAT, "gr")
-    // PRINT_CMD(LESS,  "le")
-    // PRINT_CMD(LEQ,   "leq")
-    // PRINT_CMD(GEQ,   "geq")
-    // PRINT_CMD(AND,   "and")
-    // PRINT_CMD(OR,    "or")
-    // /* else */
-    //     format_error("Unknown operator", &node->tok);
 
     return GENERATOR_NOERR;
 }
-// #undef PRINT_CMD
+
+#undef DEF_OPER
+#undef DEF_LOGICAL
+#undef DEF_UNIMPLEMENTED
 
 static generator_err call_argument(Section* sect, Node* node, size_t n_args)
 {
     assert(node);
     assert(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_PARAMETER);
 
-    n_args--;
-
-    if((n_args > 0 && !node->left) || (n_args == 0 && node->left))
+    if((n_args > 1 && !node->left) || (n_args == 1 && node->left))
         semantic_error("Wrong amount of arguments", &node->tok);
 
     if(node->left)
-        PASS$(!call_argument(sect, node->left, n_args), return GENERATOR_PASS_ERROR; );
+        PASS$(!call_argument(sect, node->left, n_args - 1), return GENERATOR_PASS_ERROR; );
 
     if(!node->right)
         format_error("Missing argument", &node->right->tok);
     
-    Local_var arg = {};
-    localtable_allocate_argument(LOCALTABLE, &arg);
-
     PASS$(!expression(sect, node->right), return GENERATOR_PASS_ERROR; );
 
-    encode(&sect->buffer, {POP, MEM(0, {}, RBP, arg.offset), {}});
+    switch(n_args)
+    {
+        case 6:
+            encode(&sect->buffer, {POP, R9, {}});
+            break;
+        case 5:
+            encode(&sect->buffer, {POP, R8, {}});
+            break;
+        case 4:
+            encode(&sect->buffer, {POP, RCX, {}});
+            break;
+        case 3:
+            encode(&sect->buffer, {POP, RDX, {}});
+            break;
+        case 2:
+            encode(&sect->buffer, {POP, RSI, {}});
+            break;
+        case 1:
+            encode(&sect->buffer, {POP, RDI, {}});
+            break;
+        default:
+            void(0);
+    }
 
     return GENERATOR_NOERR;
 }
@@ -373,24 +286,28 @@ static generator_err call(Section* sect, Node* node)
     if((sym.func.n_args == 0 && node->right) || (sym.func.n_args > 0 && !node->right))
         semantic_error("Wrong amount of arguments", &node->left->tok);
     
-    if(sym.func.n_args)
-        encode(&sect->buffer, {SUB, RSP, IMM32(8 * (int32_t) sym.func.n_args)});
-
     if(node->right)
         PASS$(!call_argument(sect, node->right, sym.func.n_args), return GENERATOR_PASS_ERROR; );
     
+    if(LOCALTABLE->offset_top % 16)
+        encode(&sect->buffer, {SUB, RSP, IMM32(0x8)});
+    
+    encode(&sect->buffer, {XOR, RAX, RAX});
     encode(&sect->buffer, {CALL, IMM32(0x0), {}});
 
     Reloc reloc = {.dst_section_descriptor = sect->descriptor,
                    .dst_offset = sect->buffer.pos - sizeof(int32_t),
-                   .dst_init_val = 0,
-                   .src_nametable_index = sym_index
+                   .dst_init_val = - (int32_t) sizeof(int32_t),
+                   .src_nametable_index = sym_index,
                   };
     
     relocations_insert(RELOCATIONS, reloc);
 
-    localtable_deallocate(LOCALTABLE, sym.func.n_args);
-    encode(&sect->buffer, {ADD, RSP, IMM32(8 * (int32_t) sym.func.n_args)});
+    if(LOCALTABLE->offset_top % 16)
+        encode(&sect->buffer, {ADD, RSP, IMM32(0x8)});
+
+    if(sym.func.n_args > 6)
+        encode(&sect->buffer, {ADD, RSP, IMM32(8 * (int32_t) (sym.func.n_args - 6))});
 
     encode(&sect->buffer, {PUSH, RAX, {}});
     
@@ -413,11 +330,10 @@ static generator_err expression(Section* sect, Node* node)
         return GENERATOR_NOERR;
     }
 
-    // if(node->tok.type == TYPE_EMBED)
-    // {
-    //     PASS$(!embedded(node), return GENERATOR_PASS_ERROR; );
-    //     return GENERATOR_NOERR;
-    // }
+    if(node->tok.type == TYPE_EMBED)
+    {
+        format_error("Embedded functions are not supported in ELF compilator", &node->tok);
+    }
 
     if(node->tok.type == TYPE_AUX && node->tok.val.aux == TOK_CALL)
     {
@@ -426,11 +342,13 @@ static generator_err expression(Section* sect, Node* node)
     }
 
     if(node->left)
+    {
         PASS$(!expression(sect, node->left), return GENERATOR_PASS_ERROR; );
-
+    }
     if(node->right)
+    {
         PASS$(!expression(sect, node->right), return GENERATOR_PASS_ERROR; );
-        
+    }
     if(node->tok.type == TYPE_OP)
     {
         PASS$(!oper(sect, node), return GENERATOR_PASS_ERROR; );
@@ -458,7 +376,7 @@ static generator_err conditional(Node* node)
     PASS$(!expression(TEXT, node->left), return GENERATOR_PASS_ERROR; );
     
     encode(&TEXT->buffer, {POP, RAX, {}});
-    encode(&TEXT->buffer, {CMP, RAX, IMM32(0)});
+    encode(&TEXT->buffer, {TEST, RAX, RAX});
 
     jmp_false_offset = TEXT->buffer.pos;
     encode(&TEXT->buffer, {JE, IMM32(0xADDE), {}});
@@ -519,7 +437,7 @@ static generator_err cycle(Node* node)
     PASS$(!expression(TEXT, node->left), return GENERATOR_PASS_ERROR; );
 
     encode(&TEXT->buffer, {POP, RAX, {}});
-    encode(&TEXT->buffer, {CMP, RAX, IMM32(0)});
+    encode(&TEXT->buffer, {TEST, RAX, RAX});
 
     jmp_cond_offset = TEXT->buffer.pos;
     encode(&TEXT->buffer, {JNE, IMM32(0xADDE)});
@@ -652,8 +570,8 @@ static generator_err assignment(Node* node)
 
         Reloc reloc = {.dst_section_descriptor = TEXT->descriptor,
                        .dst_offset = TEXT->buffer.pos - sizeof(int32_t),
-                       .dst_init_val = 0,
-                       .src_nametable_index = sym_index
+                       .dst_init_val = - (int32_t) sizeof(int32_t),
+                       .src_nametable_index = sym_index,
                       };
         
         relocations_insert(RELOCATIONS, reloc);
@@ -662,7 +580,7 @@ static generator_err assignment(Node* node)
     }
     else
     {
-        encode(&TEXT->buffer, {POP, MEM(scale, index_reg, RBP, var.offset), {}});    
+        encode(&TEXT->buffer, {POP, MEM(scale, index_reg, RBP, var.offset), {}}); 
     }
 
     return GENERATOR_NOERR;
@@ -710,7 +628,7 @@ static generator_err statement(Node* node)
     return GENERATOR_NOERR;
 }
 
-static generator_err parameter(Node* node)
+static generator_err parameter(Node* node, size_t n_params)
 {
     assert(node);
     
@@ -718,7 +636,7 @@ static generator_err parameter(Node* node)
         format_error("'parameter' expected", &node->tok);
 
     if(node->left)
-        PASS$(!parameter(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!parameter(node->left, n_params - 1), return GENERATOR_PASS_ERROR; );
     
     if(node->right->tok.type != TYPE_ID)
         format_error("Parameter is not id", &node->right->tok);
@@ -741,17 +659,61 @@ static generator_err parameter(Node* node)
     if(symtable_find(SYMTABLE, param.id) == 0 || localtable_find(LOCALTABLE, param.id) == 0)
         semantic_error("Variable redeclaration", &node->right->tok);
 
-    PASS$(!localtable_set_parameter(LOCALTABLE, &param), return GENERATOR_PASS_ERROR; );
+    switch(n_params)
+    {
+        case 6:
+            encode(&TEXT->buffer, {PUSH, R9, {}});
+            break;
+        case 5:
+            encode(&TEXT->buffer, {PUSH, R8, {}});
+            break;
+        case 4:
+            encode(&TEXT->buffer, {PUSH, RCX, {}});
+            break;
+        case 3:
+            encode(&TEXT->buffer, {PUSH, RDX, {}});
+            break;
+        case 2:
+            encode(&TEXT->buffer, {PUSH, RSI, {}});
+            break;
+        case 1:
+            encode(&TEXT->buffer, {PUSH, RDI, {}});
+            break;
+        default:
+            PASS$(!localtable_set_parameter(LOCALTABLE, &param), return GENERATOR_PASS_ERROR; );
+            return GENERATOR_NOERR;
+    }
+
+    PASS$(!localtable_allocate(LOCALTABLE, &param), return GENERATOR_PASS_ERROR; );
 
     return GENERATOR_NOERR;
 }
 
-static generator_err fill_funcs_table(Node* node)
+static generator_err collect_stdlib_functions(Dependencies* deps)
+{
+    assert(deps);
+
+    for(size_t iter = 0; iter < deps->buffer_sz; iter++)
+    {
+        Dep dep = deps->buffer[iter];
+
+        Symbol sym = {.type = SYMBOL_TYPE_FUNCTION,
+                      .id = dep.func.val.name,
+                      .func = (Function) {.n_args = dep.n_args}
+                     };
+
+        ASSERT$(!symtable_insert(SYMTABLE, sym), GENERATOR_PASS_ERROR, return GENERATOR_PASS_ERROR; );
+    }
+
+    return GENERATOR_NOERR;
+}
+
+static generator_err collect_functions(Node* node)
 {
     assert(node);
 
     if(node->left)
-        PASS$(!fill_funcs_table(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!collect_functions(node->left), return GENERATOR_PASS_ERROR; );
     
     if(node->tok.type != TYPE_AUX || node->tok.val.aux != TOK_STATEMENT)
         format_error("'statement' expected (first line)", &node->tok);
@@ -798,16 +760,16 @@ static generator_err fill_funcs_table(Node* node)
         semantic_error("Function redefinition", &ptr->tok);
 
     PASS$(!symtable_insert(SYMTABLE, sym), return GENERATOR_PASS_ERROR; );
-
+        
     return GENERATOR_NOERR;
 }
 
-static generator_err generate_funcs(Node* node)
+static generator_err generate_funtions(Node* node)
 {
     assert(node);
 
     if(node->left)
-        PASS$(!generate_funcs(node->left), return GENERATOR_PASS_ERROR; );
+        PASS$(!generate_funtions(node->left), return GENERATOR_PASS_ERROR; );
     
     if(node->right->tok.type != TYPE_AUX || node->right->tok.val.aux != TOK_DEFINE)
         return GENERATOR_NOERR;
@@ -820,19 +782,23 @@ static generator_err generate_funcs(Node* node)
     uint64_t sym_index = {};
     assert(!symtable_find(SYMTABLE, func_name, &sym, &sym_index));
 
-    SYMTABLE->buffer[sym_index].offset             = TEXT->buffer.pos;
-    SYMTABLE->buffer[sym_index].section_descriptor = TEXT->descriptor;
+    Symbol* ptr = &SYMTABLE->buffer[sym_index];
+    ptr->offset             = TEXT->buffer.pos;
+    ptr->section_descriptor = TEXT->descriptor;
 
     encode(&TEXT->buffer, {PUSH, RBP, {}});
     encode(&TEXT->buffer, {MOV, RBP, RSP});
 
+    size_t n_param = sym.func.n_args;
     Node* param = node->right->left->right;
     if(param)
-        PASS$(!parameter(param), return GENERATOR_PASS_ERROR; );
+        PASS$(!parameter(param, n_param), return GENERATOR_PASS_ERROR; );
 
     Node* stmnt = node->right->right;
     if(stmnt)
         PASS$(!statement(stmnt), return GENERATOR_PASS_ERROR; );
+
+    ptr->s_size = TEXT->buffer.pos - ptr->offset;
 
     if(stmnt->right->tok.type != TYPE_KEYWORD || stmnt->right->tok.val.key != TOK_RETURN)
         semantic_error("Missing terminational", &node->right->left->left->tok);
@@ -845,13 +811,21 @@ static generator_err generate_funcs(Node* node)
 
 static generator_err declare_global(Node* node)
 {
-    PASS$(!expression(INIT, node->right), return GENERATOR_PASS_ERROR; );
-
     if(!node->left)
         format_error("Assignment requires lvalue", &node->tok);
 
     if(node->left->tok.type != TYPE_ID)
         format_error("Assignment requires identifier as lvalue", &node->left->tok);
+
+    // PASS$(!expression(INIT, node->right), return GENERATOR_PASS_ERROR; );
+
+    if(!node->right)
+        semantic_error("Global variable is not initialized", &node->left->  tok);
+
+    if(node->right->tok.type != TYPE_NUMBER)
+        semantic_error("Global variable is not compile-time evaluatable", &node->left->tok);
+
+    uint64_t value = (uint64_t) node->right->tok.val.num;
 
     bool is_const = false;
     if(node->left->left)
@@ -872,35 +846,43 @@ static generator_err declare_global(Node* node)
             semantic_error("Global variable redeclaration", &node->left->tok);
     }
 
-    int32_t shift = 0;
+    uint64_t shift = 0;
     if(node->left->right)
     {
         if(node->left->right->tok.type != TYPE_NUMBER)
             semantic_error("Size of variable is not compile-time evaluatable", &node->left->tok);
 
-        shift = (int32_t) node->left->right->tok.val.num;
+        if(node->left->right->tok.val.num < 0)
+            semantic_error("Size of variable is negative", &node->left->tok);
+
+        shift = (uint64_t) node->left->right->tok.val.num;
     }
 
     sym = {.type               = SYMBOL_TYPE_VARIABLE,
            .id                 = node->left->tok.val.name,
            .offset             = DATA->buffer.pos,
            .section_descriptor = DATA->descriptor,
-           .var  = (Variable) {.is_const = is_const, .size = (size_t) shift + 1}
+           .var  = (Variable) {.is_const = is_const, .size = shift + 1}
           };
     
     uint64_t sym_index = 0;
     symtable_insert(SYMTABLE, sym, &sym_index);
-    buffer_append_u64(&DATA->buffer, 0x0);
 
-    encode(&INIT->buffer, {POP, MEM(0x0, {}, {}, 0x0), {}});
+    for(size_t iter = 0; iter < shift; iter++)
+    {
+        buffer_append_u64(&DATA->buffer, 0x0);
+    }
+    buffer_append_u64(&DATA->buffer, value);
+
+    // encode(&INIT->buffer, {POP, MEM(0x0, {}, {}, 0x0), {}});
     
-    Reloc reloc = {.dst_section_descriptor = INIT->descriptor,
-                   .dst_offset = INIT->buffer.pos - sizeof(int32_t),
-                   .dst_init_val = shift,
-                   .src_nametable_index = sym_index
-                  };
+    // Reloc reloc = {.dst_section_descriptor = INIT->descriptor,
+    //                .dst_offset = INIT->buffer.pos - sizeof(int32_t),
+    //                .dst_init_val = shift - (int32_t) sizeof(int32_t),
+    //                .src_nametable_index = sym_index,
+    //               };
         
-    relocations_insert(RELOCATIONS, reloc);
+    // relocations_insert(RELOCATIONS, reloc);
 
     return GENERATOR_NOERR;
 }
@@ -929,52 +911,88 @@ static generator_err generate_globals(Node* node)
     return GENERATOR_NOERR;
 }
 
-generator_err generator(Tree* tree, Binary* bin)
+generator_err generator(Tree* tree, Dependencies* deps, Binary* bin)
 {
     assert(bin && tree);
 
     symtable_dump_init(logs_get());
 
-    Section null = {.needs_phdr = false,
-                    .needs_shdr = true,
-                    .stype  = SHT_NULL,
-                    .name = ""
+    Section null = {(Elf64_Shdr)
+                    {
+                        .sh_type  = SHT_NULL,
+                    },
+                    .name = "",
                    };
 
-    Section text = {.needs_phdr = true,
-                    .needs_shdr = true,
-                    .ptype  = PT_LOAD,
-                    .pflags = PF_EXECUTE | PF_READ,
-                    .stype  = SHT_PROGBITS,
-                    .sflags = SHF_EXECINSTR | SHF_ALLOC,
-                    .salign = 16,
+    Section text = {(Elf64_Shdr)
+                    {
+                        .sh_type  = SHT_PROGBITS,
+                        .sh_flags = SHF_EXECINSTR | SHF_ALLOC,
+                        .sh_addralign = 16,
+                    },
                     .name = ".text",
                    };
 
-    Section init = {.needs_phdr = true,
-                    .needs_shdr = true,
-                    .ptype  = PT_LOAD,
-                    .pflags = PF_EXECUTE | PF_READ,
-                    .stype  = SHT_PROGBITS,
-                    .sflags = SHF_EXECINSTR | SHF_ALLOC,
-                    .salign = 16,
-                    .name = ".init",
-                   };
+    Section relatbl = {(Elf64_Shdr)
+                       {
+                            .sh_type  = SHT_RELA,
+                            .sh_flags = SHF_INFO_LINK,
+                            .sh_addralign = 8,
+                            .sh_entsize = sizeof(Elf64_Rela),
+                       },
+                       .name = ".rela.text",
+                      };
+    
+    // Section init = {(Elf64_Shdr)
+    //                 {
+    //                     .sh_type  = SHT_PROGBITS,
+    //                     .sh_flags = SHF_EXECINSTR | SHF_ALLOC,
+    //                     .sh_addralign = 16,
+    //                 },
+    //                 .name = ".init",
+    //                };
 
-    Section data = {.needs_phdr = true,
-                    .needs_shdr = true,
-                    .ptype  = PT_LOAD,
-                    .pflags = PF_WRITE | PF_READ,
-                    .stype  = SHT_PROGBITS,
-                    .sflags = SHF_WRITE | SHF_ALLOC,
-                    .salign = 8,
+    Section data = {(Elf64_Shdr)
+                    {
+                        .sh_type  = SHT_PROGBITS,
+                        .sh_flags = SHF_WRITE | SHF_ALLOC,
+                        .sh_addralign = 8,
+                    },
                     .name = ".data",
                    };
 
+    Section symtab = {(Elf64_Shdr)
+                      {
+                          .sh_type  = SHT_SYMTAB,
+                          .sh_flags = 0x0,
+                          .sh_addralign = 8,
+                          .sh_entsize = sizeof(Elf64_Sym),
+                      },
+                      .name = ".symtab",
+                     };
+
+    Section strtab = {(Elf64_Shdr)
+                      {
+                          .sh_type  = SHT_STRTAB,
+                          .sh_flags = 0x0,
+                          .sh_addralign = 1,
+                      },
+                      .name = ".strtab",
+                     };
+
     binary_reserve_section(bin, &null);
     binary_reserve_section(bin, &text);
-    binary_reserve_section(bin, &init);
+    binary_reserve_section(bin, &relatbl);
+    // binary_reserve_section(bin, &init);
     binary_reserve_section(bin, &data);
+    binary_reserve_section(bin, &symtab);
+    binary_reserve_section(bin, &strtab);
+
+    relatbl.shdr.sh_info = (Elf64_Word) text.descriptor;
+    relatbl.shdr.sh_link = (Elf64_Word) symtab.descriptor;
+
+    symtab.shdr.sh_info  = 0; // # of local symbols
+    symtab.shdr.sh_link  = (Elf64_Word) strtab.descriptor;
 
     Symtable    symbols = {};
     Localtable  locals  = {};
@@ -983,45 +1001,41 @@ generator_err generator(Tree* tree, Binary* bin)
     localtable_ctor (&locals);
     relocations_ctor(&relocs);
 
+    Symbol null_sym = {.id = ""};
+    symtable_insert(&symbols, null_sym);
+
     RELOCATIONS = &relocs;
     SYMTABLE    = &symbols;
     LOCALTABLE  = &locals;
 
     TEXT = &text;
     DATA = &data;
-    INIT = &init;
+    // INIT = &init;
 
-    fill_funcs_table(tree->root);
+    PASS$(!collect_stdlib_functions(deps), return GENERATOR_PASS_ERROR; );
+
+    collect_functions(tree->root);
 
     generate_globals(tree->root);
 
-    generate_funcs(tree->root);
+    generate_funtions(tree->root);
 
-    // PASS$(!fill_funcs_table(tree->root), return GENERATOR_PASS_ERROR; );
-    // MSG$("Functions:");
-    // functable_dump(&funcs);
-
-    // print_tab("push %ld\n"
-    //           "pop rcx\n",
-    //            MEMORY_GLOBAL);
-
-    // PASS$(!generate_globals(tree->root), return GENERATOR_PASS_ERROR; );
-    // MSG$("Global variables:");
-    // vartable_dump(&globals);
-
-    // print_tab("push %ld\n"
-    //           "pop rbx\n",
-    //           vartable_end(&globals));
-
-    // print_tab("call func__%lx\n", fnv1_64(MAIN_STD_NAME, sizeof(MAIN_STD_NAME) - 1));
-
-    // print_tab("hlt\n");
-
-    // PASS$(!generate_funcs(tree->root), return GENERATOR_PASS_ERROR; );
+    symtable_dump(&symbols);
 
     binary_store_section(bin, text);
-    binary_store_section(bin, init);
+    // binary_store_section(bin, init);
     binary_store_section(bin, data);
+
+    binary_generate_rela(&relatbl, &symbols, &relocs);
+
+    binary_generate_strtab(&strtab, &symbols);
+    binary_generate_symtab(&symtab, &symbols);
+
+    symtable_dump(&symbols);
+
+    binary_store_section(bin, relatbl);
+    binary_store_section(bin, strtab);
+    binary_store_section(bin, symtab);
 
     binary_generate_shstrtab(bin);
 
@@ -1029,18 +1043,11 @@ generator_err generator(Tree* tree, Binary* bin)
 
     binary_arrange_sections(bin);
 
-    binary_generate_phdrs(bin);
     binary_generate_shdrs(bin);
     binary_generate_ehdr(bin);
 
-    LOG$("Before relocations");
-    relocations_resolve(&relocs, &symbols, bin);
-    LOG$("After relocations");
-
     SYMTABLE   = nullptr;
     LOCALTABLE = nullptr;
-
-    symtable_dump(&symbols);
 
     symtable_dtor   (&symbols);
     localtable_dtor (&locals);

@@ -41,38 +41,39 @@ export CXXFLAGS ?=  -O2 -mavx -mavx2 -g -std=c++14 -fmax-errors=100 -Wall -Wextr
 				-fsanitize=vptr                                                 				\
 				-fPIE                                                           				\
 				-lm -pie 					 
-#--static-pie
+
 # not overwrite DESTDIR if recursive
 export DESTDIR 	  	?= $(CURDIR)/bin
 BACKEND_TARGET 		:= $(DESTDIR)/backend
-BACKEND_ELF_TARGET 	:= $(DESTDIR)/backend_elf
+ELF_BACKEND_TARGET 	:= $(DESTDIR)/elf_backend
 FRONTEND_TARGET   	:= $(DESTDIR)/frontend
 TRANSPILER_TARGET 	:= $(DESTDIR)/transpiler
 
 export OBJDIR 	 := $(CURDIR)/obj
-BACKEND_OBJ      := backend.o common.o Token.o Tree.o
-BACKEND_ELF_OBJ  := backend_elf.o common.o Token.o Tree.o logs.o
-FRONTEND_OBJ     := frontend.o common.o Token.o Tree.o
-TRANSPILER_OBJ   := transpiler.o common.o Token.o Tree.o
+BACKEND_OBJ      := backend.o common.o Token.o Tree.o logs.o
+ELF_BACKEND_OBJ  := elf_backend.o common.o Token.o Tree.o logs.o
+FRONTEND_OBJ     := frontend.o common.o Token.o Tree.o logs.o
+TRANSPILER_OBJ   := transpiler.o common.o Token.o Tree.o logs.o
+
 #------------------------------------------------------------------------------
-all: backend frontend transpiler cpu assembler
+all: backend elf_backend frontend transpiler cpu assembler
 
-backend_elf: common tree token logs | $(OBJDIR) $(DESTDIR)
-	@ cd src/backend_elf && $(MAKE)
+elf_backend: common tree token logs | $(OBJDIR) $(DESTDIR)
+	@ cd src/elf_backend && $(MAKE)
 	@ echo ======== Linking $(notdir $@) ========
-	@ $(CXX) $(addprefix $(OBJDIR)/, $(BACKEND_ELF_OBJ)) -o $(BACKEND_ELF_TARGET) $(CXXFLAGS)
+	@ $(CXX) $(addprefix $(OBJDIR)/, $(ELF_BACKEND_OBJ)) -o $(ELF_BACKEND_TARGET) $(CXXFLAGS)
 
-backend: common tree token | $(OBJDIR) $(DESTDIR)
+backend: common tree token logs | $(OBJDIR) $(DESTDIR)
 	@ cd src/backend && $(MAKE)
 	@ echo ======== Linking $(notdir $@) ========
 	@ $(CXX) $(addprefix $(OBJDIR)/, $(BACKEND_OBJ)) -o $(BACKEND_TARGET) $(CXXFLAGS)
 
-frontend: common tree token | $(OBJDIR) $(DESTDIR)
+frontend: common tree token logs | $(OBJDIR) $(DESTDIR)
 	@ cd src/frontend && $(MAKE)
 	@ echo ======== Linking $(notdir $@) ========
 	@ $(CXX) $(addprefix $(OBJDIR)/, $(FRONTEND_OBJ)) -o $(FRONTEND_TARGET) $(CXXFLAGS)
 
-transpiler: common tree token | $(OBJDIR) $(DESTDIR)
+transpiler: common tree token logs | $(OBJDIR) $(DESTDIR)
 	@ cd src/transpiler && $(MAKE)
 	@ echo ======== Linking $(notdir $@) ========
 	@ $(CXX) $(addprefix $(OBJDIR)/, $(TRANSPILER_OBJ)) -o $(TRANSPILER_TARGET) $(CXXFLAGS)
@@ -90,8 +91,8 @@ clean:
 distclean:
 	@ cd include/Processor && $(MAKE) clean
 	rm -rf $(OBJDIR) $(DESTDIR)
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 common: | $(OBJDIR)
 	@ cd src/common && $(MAKE)
 
@@ -110,4 +111,4 @@ $(OBJDIR):
 $(DESTDIR):
 	mkdir $(DESTDIR)
 
-.PHONY: backend_elf backend frontend transpiler cpu assembler clean distclean common token tree logs
+.PHONY: elf_backend backend frontend transpiler cpu assembler clean distclean common token tree logs

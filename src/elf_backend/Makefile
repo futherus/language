@@ -42,8 +42,8 @@ CXXFLAGS ?= 	   -O2 -g --static-pie -std=c++14 -fmax-errors=100 -Wall -Wextra   
     			   -fsanitize=vptr                                                 				\
     			   -lm -pie 					 
 
-SRC 	:= backend_elf.cpp generator_elf.cpp symtable.cpp symtable_dump.cpp encode.cpp elf.cpp buffer.cpp relocation.cpp
-OUT 	:= backend_elf.o
+SRC 	:= elf_backend.cpp elf_generator.cpp symtable.cpp symtable_dump.cpp encode.cpp elf_wrap.cpp buffer.cpp relocation.cpp
+OUT 	:= elf_backend.o
 
 # temporary object files
 OBJ 	:= $(addprefix $(OBJDIR)/, $(SRC:.cpp=.tmp.o))
@@ -53,7 +53,6 @@ all: $(OUT)
 
 $(OUT): $(OBJ) | $(OBJDIR)
 	ld -r $(OBJ) -o $(OUT)
-	
 
 $(OBJDIR)/%.tmp.o : %.cpp
 	@ echo ======== Compiling $(notdir $@) ========

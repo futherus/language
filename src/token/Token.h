@@ -6,14 +6,16 @@
 
 enum token_type
 {
-    TYPE_EOF      = -1,
-    TYPE_NOTYPE   =  0,
-    TYPE_OP       =  1,
-    TYPE_EMBED    =  2,
-    TYPE_KEYWORD  =  3,
-    TYPE_AUX      =  4,
-    TYPE_NUMBER   =  5,
-    TYPE_ID       =  6,
+    TYPE_EOF             = -1,
+    TYPE_NOTYPE          =  0,
+    TYPE_OP              =  1,
+    TYPE_EMBED           =  2,
+    TYPE_KEYWORD         =  3,
+    TYPE_AUX             =  4,
+    TYPE_NUMBER          =  5,
+    TYPE_ID              =  6,
+    TYPE_DIRECTIVE_BEGIN =  7,
+    TYPE_DIRECTIVE_END   =  8,
 };
 
 #define DEF_OP(NAME, STD_NAME, MANGLE) TOK_##MANGLE,

@@ -4,10 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "symtable.h"
-#include "encode.h"
-#include "elf.h"
-
 struct Reloc
 {
     uint64_t    dst_section_descriptor;
@@ -28,6 +24,5 @@ int  relocations_ctor(Relocations* rel);
 void relocations_dtor(Relocations* rel);
 
 int  relocations_insert (Relocations* rel, Reloc reloc);
-int  relocations_resolve(Relocations* rel, Symtable* tbl, Binary* bin);
 
 #endif // RELOCATION_H

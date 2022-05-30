@@ -26,14 +26,17 @@ int main(int argc, char* argv[])
     tree_dump_init(dumpsystem_get_stream(frontend_log));
     token_dump_init(dumpsystem_get_stream(frontend_log));
 
-    char  infile_name[FILENAME_MAX]  = "";
+    char  infile_name [FILENAME_MAX] = "";
     char  outfile_name[FILENAME_MAX] = "";
+    char* depfile_name = nullptr;
+
     char* data = nullptr;
 
     FILE* istream = nullptr;
     FILE* ostream = nullptr;
 
     Tree tree = {};
+    Dependencies deps = {};
     Token_array tok_arr = {};
     Token_nametable tok_table = {};
 
@@ -50,6 +53,10 @@ int main(int argc, char* argv[])
 TRY__
     ASSERT$(get_file_sz_(infile_name, &file_sz) != -1,
                                                 FRONTEND_INFILE_FAIL,  FAIL__);
+
+    ASSERT$(!dep_get_filename(&depfile_name, outfile_name),
+                                                FRONTEND_OUTFILE_FAIL, FAIL__);
+                                                
     data = (char*) calloc(file_sz + 1, sizeof(char));
     ASSERT$(data,                               FRONTEND_BAD_ALLOC,    FAIL__);
 
@@ -76,12 +83,21 @@ TRY__
 
     ASSERT$(!lexer_error,                       FRONTEND_LEXER_FAIL,   FAIL__);
 
-    ASSERT$(!parse(&tree, &tok_arr),            FRONTEND_PARSER_FAIL,  FAIL__);
+    ASSERT$(!parse(&tree, &deps, &tok_arr),     FRONTEND_PARSER_FAIL,  FAIL__);
 
     ostream = fopen(outfile_name, "w");
     ASSERT$(ostream,                            FRONTEND_OUTFILE_FAIL, FAIL__);
 
     tree_write(&tree, ostream);
+    ASSERT$(!ferror(ostream),                   FRONTEND_WRITE_FAIL,   FAIL__);
+
+    fclose(ostream);
+    ostream = nullptr;
+
+    ostream = fopen(depfile_name, "w");
+    ASSERT$(ostream,                            FRONTEND_OUTFILE_FAIL, FAIL__);
+
+    dep_write(&deps, ostream);
     ASSERT$(!ferror(ostream),                   FRONTEND_WRITE_FAIL,   FAIL__);
 
     fclose(ostream);
@@ -99,9 +115,12 @@ CATCH__
     free(data);
 
 FINALLY__
+    dep_dtor(&deps);
     tree_dstr(&tree);
     token_array_dstr(&tok_arr);
     token_nametable_dstr(&tok_table);
+
+    free(depfile_name);
 
     return ERROR__;
 

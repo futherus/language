@@ -4,8 +4,9 @@
 #include "lexer.h"
 #include "../common/dumpsystem.h"
 
-static Tree*        TREE_        = nullptr;
-static Token_array* TOKEN_ARRAY_ = nullptr;
+static Tree*         TREE_         = nullptr;
+static Token_array*  TOKEN_ARRAY_  = nullptr;
+static Dependencies* DEPENDENCIES_ = nullptr;
 
 static void syntax_error_tokens()
 {
@@ -60,8 +61,7 @@ do                                                                              
         Terminational   ::= 'вышпурнуць' Expression  'нарэшце'
         Show            ::= 'надрукаваць' 'нарэшце'
         Pixel           ::= 'пафарбаваць' '(' Expression ',' Expression ')' 'нарэшце'
-        Assign          ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца'                                 '{' Expression {',' Expression}* '}' 'нарэшце' |
-                                                                                      Expression 'нарэшце'
+        Assign          ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца' Expression 'нарэшце' |                                                      
 
         Statement  ::= Conditional   |
                        Cycle         |
@@ -695,6 +695,68 @@ static parser_err define(Node** base)
     return PARSER_NOERR;
 }
 
+static parser_err directive()
+{
+    LOG$("Entering");
+
+    assert(DEPENDENCIES_);
+    
+    Dep dep = {};
+    Token tok = {};
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_DIRECTIVE_BEGIN)
+        syntax_error("Begin of directive expected", &tok);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_ID)
+        syntax_error("Function name expected (directive)", &tok);
+        
+    dep.func = tok;
+    
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_LRPAR)
+        syntax_error("Opening parenthesis expected (directive)", &tok);
+    
+    PEEK(&tok, 0);
+    if(tok.type == TYPE_ID)
+    {
+        CONSUME(&tok);
+        dep.n_args++;
+    }
+
+    PEEK(&tok, 0);
+    while(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
+    {
+        CONSUME(&tok);
+        if(tok.type != TYPE_OP || tok.val.op != TOK_COMMA)
+            syntax_error("Expected comma (directive)", &tok);
+
+        CONSUME(&tok);
+        if(tok.type != TYPE_ID)
+            syntax_error("Expected comma (directive)", &tok);
+
+        dep.n_args++;
+        PEEK(&tok, 0);
+    }
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_OP || tok.val.op != TOK_RRPAR)
+        syntax_error("Closing parenthesis expected (directive)", &tok);
+    
+    int err = dep_add(DEPENDENCIES_, dep);
+    if(err == DEP_ALREADY_INSERTED)
+        syntax_error("Redeclaration of function (directive)", &tok);
+    
+    ASSERT_RET$(!err, PARSER_PASS_ERR);
+
+    CONSUME(&tok);
+    if(tok.type != TYPE_DIRECTIVE_END)
+        syntax_error("End of directive expected", &tok);
+
+    return PARSER_NOERR;
+}
+
 static parser_err general(Node** base)
 {
     LOG$("Entering");
@@ -707,6 +769,13 @@ static parser_err general(Node** base)
     PEEK(&tok, 0);
     while(tok.type != TYPE_EOF)
     {
+        if(tok.type == TYPE_DIRECTIVE_BEGIN)
+        {
+            PASS$(!directive(), return PARSER_PASS_ERR; );
+            PEEK(&tok, 0);
+            continue;
+        }
+
         tmp = *base;
         MK_AUX(base, TOK_STATEMENT);
         (*base)->left = tmp;
@@ -733,12 +802,13 @@ static parser_err general(Node** base)
     return PARSER_NOERR;
 }
 
-parser_err parse(Tree* tree, Token_array* tok_arr)
+parser_err parse(Tree* tree, Dependencies* deps, Token_array* tok_arr)
 {
     assert(tree && tok_arr);
 
-    TREE_        = tree;
-    TOKEN_ARRAY_ = tok_arr;
+    TREE_         = tree;
+    TOKEN_ARRAY_  = tok_arr;
+    DEPENDENCIES_ = deps;
 
     MSG$("\n\n----------------------Parsing started----------------------\n\n");
 
@@ -751,8 +821,9 @@ parser_err parse(Tree* tree, Token_array* tok_arr)
         
     tree_dump(TREE_, "DUMP");
 
-    TREE_        = nullptr;
-    TOKEN_ARRAY_ = nullptr;
+    TREE_         = nullptr;
+    TOKEN_ARRAY_  = nullptr;
+    DEPENDENCIES_ = nullptr;
 
     return err;
 }

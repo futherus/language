@@ -88,6 +88,7 @@ static ptrdiff_t nametable_find_(Token_nametable* tok_table, const char name[], 
 
     return -1;
 }
+
 token_err token_nametable_add(Token_nametable* tok_table, char** dst_ptr, const char name[], ptrdiff_t name_sz)
 {
     assert(tok_table && name);
@@ -215,6 +216,16 @@ char* std_demangle(const Token* tok)
             
             break;
         }
+        case TYPE_DIRECTIVE_BEGIN:
+        {
+            sprintf(buffer, "%c", DIRECTIVE_BEGIN);
+            break;
+        }
+        case TYPE_DIRECTIVE_END:
+        {
+            sprintf(buffer, "%c", DIRECTIVE_END);
+            break;
+        }
         case TYPE_EOF:
         {
             sprintf(buffer, "EOF");
@@ -327,6 +338,16 @@ char* demangle(const Token* tok)
             sprintf(buffer, "EOF");
             break;
         }
+        case TYPE_DIRECTIVE_BEGIN:
+        {
+            sprintf(buffer, "%c", DIRECTIVE_BEGIN);
+            break;
+        }
+        case TYPE_DIRECTIVE_END:
+        {
+            sprintf(buffer, "%c", DIRECTIVE_END);
+            break;
+        }
         default: case TYPE_NOTYPE :
         {
             assert(0 && tok->type);
@@ -335,3 +356,8 @@ char* demangle(const Token* tok)
 
     return buffer;
 }
+
+#undef DEF_OP
+#undef DEF_KEY
+#undef DEF_EMB
+#undef DEF_AUX

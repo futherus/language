@@ -14,7 +14,8 @@ static int buffer_resize(Buffer* buffer, size_t new_cap)
     new_cap = (new_cap / (BUFFER_CHUNK_SIZE + 1) + 1) * BUFFER_CHUNK_SIZE;
 
     uint8_t* ptr = (uint8_t*) realloc(buffer->buf, new_cap * sizeof(uint8_t));
-    assert(ptr && "Allocation failed");
+    if(!ptr)
+        return 1;
 
     buffer->buf = ptr;
     buffer->cap = new_cap;
@@ -28,7 +29,8 @@ static int buffer_resize(Buffer* buffer, size_t new_cap)
         assert(buffer);                                                          \
                                                                                  \
         if(buffer->buf == nullptr || buffer->cap <= buffer->size + sizeof(TYPE)) \
-            buffer_resize(buffer, buffer->cap * 2);                              \
+            if(buffer_resize(buffer, buffer->cap * 2))                           \
+                return 1;                                                        \
                                                                                  \
         memcpy(buffer->buf + buffer->pos, &val, sizeof(TYPE));                   \
         buffer->pos += sizeof(TYPE);                                             \
@@ -51,7 +53,8 @@ int buffer_append_arr(Buffer* buffer, const void* arr, size_t len)
     assert(buffer && arr);
 
     if(buffer->buf == nullptr || buffer->cap <= buffer->size + len)
-        buffer_resize(buffer, buffer->cap + len);
+        if(buffer_resize(buffer, buffer->cap + len))
+            return 1;
 
     memcpy(buffer->buf + buffer->pos, arr, len);
     buffer->pos += len;

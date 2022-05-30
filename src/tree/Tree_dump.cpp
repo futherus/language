@@ -8,6 +8,9 @@
 #endif
 
 #include "Tree.h"
+#include "../config.h"
+
+#ifdef VERBOSE
 
 static const long GRAPHVIZ_PNG_MAX_AMOUNT    = 20;
 static const long GRAPHVIZ_PNG_SECURE_AMOUNT = 3;
@@ -256,3 +259,17 @@ void tree_dump_init(FILE* dumpstream)
 
     return;
 }
+
+#else // VERBOSE
+
+void tree_dump_init(FILE*)
+{
+    void(0);
+}
+
+void tree_dump(Tree*, const char*, tree_err)
+{
+    void(0);
+}
+
+#endif // VERBOSE

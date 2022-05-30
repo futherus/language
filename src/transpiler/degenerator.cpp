@@ -200,8 +200,9 @@ static ptrdiff_t get_priority(Token* tok)
     switch(tok->type)
     {
         case TYPE_EMBED : case TYPE_ID : case TYPE_NUMBER :
+        {
             return 10;
-        
+        }
         case TYPE_OP:
         {
             if(tok->val.op == TOK_NOT)
@@ -221,7 +222,10 @@ static ptrdiff_t get_priority(Token* tok)
                 return -777;
         }
         default : case TYPE_EOF : case TYPE_NOTYPE : case TYPE_KEYWORD : case TYPE_AUX :
+                  case TYPE_DIRECTIVE_BEGIN : case TYPE_DIRECTIVE_END :
+        {
             return -777;
+        }
     }
 }
 
