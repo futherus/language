@@ -89,7 +89,8 @@ clean:
 	rm -rf $(OBJDIR)
 
 distclean:
-	@ cd include/Processor && $(MAKE) clean
+	@ cd include/Processor && $(MAKE) distclean
+	@ cd tests && $(MAKE) clean
 	rm -rf $(OBJDIR) $(DESTDIR)
 
 #------------------------------------------------------------------------------

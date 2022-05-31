@@ -228,17 +228,6 @@ static generator_err embedded(Node* node)
             print_tab("int rex\n");
             break;
         }
-        case TOK_SQRT:
-        {
-            if(!node->right || node->left)
-                format_error("Embedded 'sqrt' requires 1 argument", &node->tok);
-
-            PASS$(!expression(node->right), return GENERATOR_PASS_ERROR; );
-
-            print_tab("pop rex\n");
-            print_tab("sqrt rex\n");
-            break;
-        }
         default:
         {
             assert(0);

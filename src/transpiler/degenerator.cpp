@@ -106,7 +106,7 @@ static degenerator_err embedded(Node* node)
 
     switch(node->tok.val.emb)
     {
-        case TOK_SIN : case TOK_COS : case TOK_PRINT : case TOK_INT : case TOK_SQRT :
+        case TOK_SIN : case TOK_COS : case TOK_PRINT : case TOK_INT :
         {
             if(!node->right || node->left)
                 format_error("Embedded '' requires 1 argument", &node->tok);

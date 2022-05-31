@@ -40,71 +40,75 @@ do                                                                              
 } while(0)                                                                              \
 
 /*
-    New Grammar:
-        Primary    ::= 'дадаць' Primary       |
+    Grammar:
+        Primary    ::= 'не' Primary           |
+                       'дадаць' Primary       |
                        'за_недахопам' Primary |
-                       'не' Primary           |
                        '(' Expression ')'     |
                        TYPE_NUMBER            |
-                       TYPE_ID                |                                   //Variable
-                       TYPE_ID 'зрушаны_на' Primary                    |          //Array access
-                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call
-                       TYPE_EMB  '(' Expression ')'                               //Embedded-function call
+                       TYPE_ID                |                                   // Variable
+                       TYPE_ID 'зрушаны_на' Primary                     |         // Array access
+                       TYPE_ID  '(' {Expression {',' Expression}*}? ')' |         // Function call
+                       TYPE_EMB '(' {Expression {',' Expression}?}? ')'           // Embedded-function call
 
-        Term       ::= Primary {['падзелены_на' 'памножаны_на'] Primary}*
+        Power      ::= Primary {'ў' Primary}?
+        Term       ::= Power {['падзелены_на' 'памножаны_на'] Power}*
         Ariphmetic ::= Term {['дадаць' 'за_недахопам'] Term}*
         Boolean    ::= Ariphmetic {['аднолькавы_з' 'драбнейшы_за' 'больш_чым' 'драбнейшы_ці_аднолькавы_з' 'большы_ці_аднолькавы_з', 'розьніцца_з'] Ariphmetic}*
         Expression ::= Boolean {['ці' 'і'] Boolean}*
 
-        Conditional     ::= 'калі'    '(' Expression ')' '\\\\' {Statement}+ '////' {'інакш' '\\\\' {Statement}+ '////'}?
-        Cycle           ::= 'пакуль' '(' Expression ')' '\\\\' {Statement}+ '////'
-        Terminational   ::= 'вышпурнуць' Expression  'нарэшце'
-        Show            ::= 'надрукаваць' 'нарэшце'
-        Pixel           ::= 'пафарбаваць' '(' Expression ',' Expression ')' 'нарэшце'
-        Assign          ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца' Expression 'нарэшце' |                                                      
+        Conditional   ::= 'калі'    '(' Expression ')' '\\\\' {Statement}+ '////' {'інакш' '\\\\' {Statement}+ '////'}?
+        Cycle         ::= 'пакуль' '(' Expression ')' '\\\\' {Statement}+ '////'
+        Terminational ::= 'вышпурнуць' Expression  'нарэшце'
+        Assign        ::= {'непахісны'}? TYPE_ID {'[' Expression ']'}? 'апыняецца' Expression 'нарэшце'                                                    
 
         Statement  ::= Conditional   |
                        Cycle         |
                        Terminational |
                        Assign        |
-                       Show          |
                        Expression 'нарэшце'
 
         Define     ::= TYPE_ID '(' {{'непахісны'}? TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'
 
-        General    ::= {Define | Assign}+
+        Directive  ::= '@' TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '@'
+
+        General    ::= {Define | Assign | Directive}+
 */
 
 /*
-    Grammar:
-        Primary    ::= '!' Primary |
-                       '(' Expression ')' |
-                       TYPE_NUMBER |
-                       TYPE_ID |                                                  //Variable     
-                       TYPE_ID '>>' Primary |                                     //Array access 
-                       TYPE_ID '(' {Expression {',' Expression}*}? ')' |          //Function call
-                       TYPE_EMB  '(' Expression ')'                               //Embedded-function call
+    Common grammar:
+        Primary    ::= '!' Primary           |
+                       '+' Primary           |
+                       '-' Primary           |
+                       '(' Expression ')'    |
+                       TYPE_NUMBER           |
+                       TYPE_ID               |                                    // Variable     
+                       TYPE_ID '>>>' Primary |                                    // Array access 
+                       TYPE_ID  '(' {Expression {',' Expression}*}? ')' |         // Function call
+                       TYPE_EMB '(' {Expression {',' Expression}?}? ')'           // Embedded-function call
 
-        Term       ::= Primary {['/' '*'] Primary}*
+        Power      ::= Primary {'^' Primary}?
+        Term       ::= Power {['/' '*'] Power}*
         Ariphmetic ::= Term {['+' '-'] Term}*
         Boolean    ::= Ariphmetic {['==' '>' '<' '<=' '>=', '!='] Ariphmetic}*
         Expression ::= Boolean {['||' '&&'] Boolean}*
 
-        Conditional     ::= 'if'    '(' Expression ')' '{' {Statement}+ '}' {'else' '{' {Statement}+ '}'}?
-        Cycle           ::= 'while' '(' Expression ')' '{' {Statement}+ '}'
-        Terminational   ::= 'return' Expression ';'
-        Assign          ::= {'const'}? TYPE_ID {'[' Expression ']'}? '=' '{' Expression {',' Expression}* '}' ';' |
-                                                                         Expression ';'
+        Conditional   ::= 'if'    '(' Expression ')' '{' {Statement}+ '}' {'else' '{' {Statement}+ '}'}?
+        Cycle         ::= 'while' '(' Expression ')' '{' {Statement}+ '}'
+        Terminational ::= 'return' Expression ';'
+        Assign        ::= {'const'}? TYPE_ID {'[' Expression ']'}? '=' Expression ';'
 
-        Statement  ::= Conditional |
-                       Cycle  |
+        Statement  ::= Conditional   |
+                       Cycle         |
                        Terminational |
-                       Assign |
+                       Assign        |
                        Expression ';'
 
         Define     ::= TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '{' {Statement}+ '}'
 
-        General    ::= {Define | Assign}+
+        Directive  ::= '@' TYPE_ID '(' {TYPE_ID {',' TYPE_ID}*}? ')' '@'
+
+        General    ::= {Define | Assign | Directive}+
 */
  
 static parser_err primary(Node** base);

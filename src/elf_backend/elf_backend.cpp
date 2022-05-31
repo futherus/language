@@ -59,6 +59,7 @@ TRY__
                                                             BACKEND_ELF_INFILE_FAIL,    FAIL__);
     ASSERT$(get_file_sz_(infile_name,  &infile_sz)  != -1,
                                                             BACKEND_ELF_INFILE_FAIL,    FAIL__);
+    // FIXME assume that program has no dependencies if cannot find or open such file
     ASSERT$(get_file_sz_(depfile_name, &depfile_sz) != -1,
                                                             BACKEND_ELF_INFILE_FAIL,    FAIL__);
 
