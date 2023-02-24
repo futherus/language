@@ -1,6 +1,6 @@
 # Bellang
 
-Compiler for a Bellang (stays for "Belarusian language"), which was written as a part of study assignment.
+Compiler for a Bellang (stays for "Belarusian language"), which was written as a part of study assignment. Supports cross compilation with few other [languages](#cross-compilation).
 
 ## Contents
 
@@ -9,6 +9,7 @@ Compiler for a Bellang (stays for "Belarusian language"), which was written as a
     - [Custom bytecode](#custom-bytecode)
     - [Logs](#logs)
 * [Introduction](#introduction)
+* [Cross compilation](#cross-compilation)
 * [Build](#build)
 * [Usage](#usage)
 * [Language constructs and syntax](#language-constructs-and-syntax)
@@ -73,9 +74,19 @@ Project consists of 4 units:
 
 > Custom assembly code is compiled using *Assembler* and executed using *Processor* (see [Custom bytecode](#custom-bytecode)).
 
-Language uses custom standard for AST.
+Language uses custom standard for AST for [cross compilation](#cross-compilation).
 
-> Tree standard described in `tree_standard.md`.
+## Cross compilation
+
+Compiler supports cross compilation, which is based on common AST format.
+
+> AST standard described in `tree_standard.md`.
+
+Other languages that support cross compilation:
+
+* [Assert language by d3phys](https://github.com/d3phys/assert-lang).
+* [Joke language by k-kashapov](https://github.com/k-kashapov/lang).
+* [Lukashenko language by kefirRzevo](https://github.com/kefirRzevo/Language).
 
 ## Build
 
